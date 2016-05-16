@@ -1188,16 +1188,10 @@ public abstract class AbstractCollectionPersister
 				boolean useBatch = expectation.canBeBatched();
 				String sql = getSQLDeleteString();
 
-				boolean needPartition = elementType.isEntityType();
-				Type partitionType = null;
-				PartitionInfo partitionInfo = null;
-				if (needPartition)
-				{
-					partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-							getElementPersister().getEntityName());
-					needPartition = partitionInfo != null && partitionInfo.isPartition();
-				}
-
+                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                        getElementPersister().getEntityName());
+                boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
+                Type partitionType = null;
                 if (needPartition)
                 {
                     sql += new StringBuilder(" and ").append(partitionInfo.getColumnName())
@@ -1298,23 +1292,17 @@ public abstract class AbstractCollectionPersister
 					int i = 0;
 					int count = 0;
 					
-					boolean needPartition = elementType.isEntityType();
-					String partitionCondition = null;
-					Type partitionType = null;
-					PartitionInfo partitionInfo = null;
-					if (needPartition)
-					{
-						partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-								getElementPersister().getEntityName());
-						needPartition = partitionInfo != null && partitionInfo.isPartition();
-					}
-
-					if (needPartition)
-					{
-						partitionCondition = new StringBuilder(" and ").append(partitionInfo.getColumnName())
-								.append(" = ?").toString();
-						partitionType = getElementPersister().getPropertyType(partitionInfo.getFieldName());
-					}
+					   PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+	                            getElementPersister().getEntityName());
+	                    boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
+	                    String partitionCondition = null;
+	                    Type partitionType = null;
+	                    if (needPartition)
+	                    {
+	                        partitionCondition = new StringBuilder(" and ").append(partitionInfo.getColumnName())
+	                                .append(" = ?").toString();
+	                        partitionType = getElementPersister().getPropertyType(partitionInfo.getFieldName());
+	                    }
 					
 					
 					while ( entries.hasNext() ) {
@@ -1443,23 +1431,17 @@ public abstract class AbstractCollectionPersister
 					int offset = 1;
 					int count = 0;
 
-					boolean needPartition = elementType.isEntityType();
-					String partitionCondition = null;
-					Type partitionType = null;
-					PartitionInfo partitionInfo = null;
-					if (needPartition)
-					{
-						partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-								getElementPersister().getEntityName());
-						needPartition = partitionInfo != null && partitionInfo.isPartition();
-					}
-
-					if (needPartition)
-					{
-						partitionCondition = new StringBuilder(" and ").append(partitionInfo.getColumnName())
+                    PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                            getElementPersister().getEntityName());
+                    boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
+                    String partitionCondition = null;
+                    Type partitionType = null;
+                    if (needPartition)
+                    {
+                        partitionCondition = new StringBuilder(" and ").append(partitionInfo.getColumnName())
                                 .append(" = ?").toString();
                         partitionType = getElementPersister().getPropertyType(partitionInfo.getFieldName());
-					}
+                    }
 
 					while ( deletes.hasNext() ) {
 						PreparedStatement st = null;

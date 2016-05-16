@@ -1661,7 +1661,7 @@ public abstract class AbstractEntityPersister
 
 				if (needPartition && null != partitionValue)
 				{
-					partitionType.nullSafeSet(ps, partitionValue, 2, session);
+					partitionType.nullSafeSet(ps, partitionValue, getIdentifierColumnSpan() + 1, session);
 				}
 
                 // if ( isVersioned() ) getVersionType().nullSafeSet( ps, version, getIdentifierColumnSpan()+1, session

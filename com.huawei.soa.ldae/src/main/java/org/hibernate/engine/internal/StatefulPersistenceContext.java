@@ -1066,7 +1066,7 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			//there maybe more than one parent, filter by type
 			if ( persister.isSubclassEntityName( entityEntry.getEntityName() )
 					&& isFoundInParent( propertyName, childEntity, persister, collectionPersister, parent ) ) {
-				return collectionPersister.getCollectionType().getKeyOfOwner(parent, session);
+				return getEntry( parent ).getId();
 			}
 			else {
 				// remove wrong entry

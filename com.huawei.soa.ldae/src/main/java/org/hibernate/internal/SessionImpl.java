@@ -1649,7 +1649,7 @@ public final class SessionImpl extends AbstractSessionImpl implements EventSourc
 
 		errorIfClosed();
 		checkTransactionSynchStatus();
-		String[] implementors = new String[]{criteriaImpl.getEntityOrClassName()};
+		String[] implementors = factory.getImplementors( criteriaImpl.getEntityOrClassName() );
 		int size = implementors.length;
 
 		CriteriaLoader[] loaders = new CriteriaLoader[size];
