@@ -902,9 +902,15 @@ public abstract class Loader {
 			final ResultTransformer forcedResultTransformer) throws SQLException, HibernateException {
 
 		final RowSelection selection = queryParameters.getRowSelection();
-		final int maxRows = LimitHelper.hasMaxRows( selection ) ?
-				selection.getMaxRows() :
-				Integer.MAX_VALUE;
+		int maxRows = LimitHelper.hasMaxRows(selection) ? selection.getMaxRows() : Integer.MAX_VALUE;
+		if ( (Boolean) session.getFactory().getProperties().get("has.max.rows"))
+		{
+			Integer cfgMaxRows = (Integer) session.getFactory().getProperties().get("max.rows.size");
+			if (null != cfgMaxRows && cfgMaxRows > 0)
+			{
+				maxRows = cfgMaxRows;
+			}
+		}
 
 		final List<AfterLoadAction> afterLoadActions = new ArrayList<AfterLoadAction>();
 
@@ -953,6 +959,13 @@ public abstract class Loader {
             {
                 LOG.debugf( "Result set row: %s", count );
             }
+
+			if (count + 1 > maxRows)
+			{
+				LOG.errorv(new java.lang.Exception(), "Possible excess of limit result set row size [{0}] !",
+						java.lang.String.valueOf(count));
+			}
+
 			Object result = getRowFromResultSet(
 					rs,
 					session,
