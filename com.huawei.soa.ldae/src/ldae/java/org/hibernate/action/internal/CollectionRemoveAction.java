@@ -40,6 +40,7 @@ import org.hibernate.event.spi.PreCollectionRemoveEventListener;
 import org.hibernate.persister.collection.CollectionPersister;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
+import com.huawei.soa.ldae.partition.PartitionInfoServices;
 import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
@@ -127,21 +128,31 @@ public final class CollectionRemoveAction extends CollectionAction
             // is replaced by null or a different collection
             // (if the collection is uninitialized, hibernate has no way of
             // knowing if the collection is actually empty without querying the db)
-            PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-                    getPersister().getOwnerEntityPersister().getEntityName());
-
+            PartitionInfoServices partiotionInfoService = getSession().getFactory().getServiceRegistry()
+                    .getService(PartitionInfoServices.class);
+            PartitionInfo partitionInfo = partiotionInfoService
+                    .getPartitionInfo(getPersister().getOwnerEntityPersister().getEntityName());
             try
             {
 				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
                 {
-                    PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-							(BigDecimal) ((Map) getCollection().getOwner()).get(partitionInfo.getFieldName()));
+                    BigDecimal partitionValue = null;
+                    if (getCollection() != null)
+                    {
+                        partitionValue = (BigDecimal) ((Map) getCollection().getOwner())
+                                .get(partitionInfo.getFieldName());
+                    }
+                    else if (this.affectedOwner != null)
+                    {
+                        partitionValue = (BigDecimal) ((Map) this.affectedOwner).get(partitionInfo.getFieldName());
+                    }
+                    partiotionInfoService.setCurrentPartitionValue(partitionValue);
                 }
                 getPersister().remove(getKey(), getSession());
             }
             finally
             {
-                PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+                partiotionInfoService.removeCurrentPartitionValue();
             }
         }
 
