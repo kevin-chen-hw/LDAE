@@ -58,7 +58,7 @@ import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.BigDecimalType;
 import org.hibernate.type.Type;
 
-import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
+import com.huawei.soa.ldae.partition.PartitionInfoServices;
 
 /**
  * A superclass for loader implementations based on using LoadPlans.
@@ -246,16 +246,18 @@ public abstract class AbstractLoadPlanBasedLoader
 
         Object[] values = queryParameters.getFilteredPositionalParameterValues();
         Type[] types = queryParameters.getFilteredPositionalParameterTypes();
-        if (null != PartitionIntegrationFactory.getInstance().getCurrentPartitionValue())
+        PartitionInfoServices partiotionInfoService = session.getFactory().getServiceRegistry()
+                .getService(PartitionInfoServices.class);
+        if (null != partiotionInfoService.getCurrentPartitionValue())
         {
             Object[] newValues = Arrays.copyOf(values, values.length + 1);
-            newValues[values.length] = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
+            newValues[values.length] = partiotionInfoService.getCurrentPartitionValue();
             Type[] newTypes = Arrays.copyOf(types, types.length + 1);
             newTypes[types.length] = new BigDecimalType();
             queryParameters.setFilteredPositionalParameterValues(newValues);
             queryParameters.setFilteredPositionalParameterTypes(newTypes);
             String entityName = queryParameters.getOptionalEntityName();
-            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName();
+            String columnName = partiotionInfoService.getPartitionInfo(entityName).getColumnName();
             String tableAlias = ((AbstractLoadQueryDetails) this.getStaticLoadQuery()).getRootTableAlias();
             sql = new StringBuilder(sql).append(" AND ").append(tableAlias).append(".").append(columnName)
                     .append("=?").toString();

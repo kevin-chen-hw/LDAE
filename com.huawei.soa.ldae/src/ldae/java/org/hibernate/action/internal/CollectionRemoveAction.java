@@ -41,7 +41,6 @@ import org.hibernate.persister.collection.CollectionPersister;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
 import com.huawei.soa.ldae.partition.PartitionInfoServices;
-import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * The action for removing a collection
