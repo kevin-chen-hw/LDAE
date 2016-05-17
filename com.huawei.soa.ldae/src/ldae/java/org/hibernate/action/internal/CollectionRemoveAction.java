@@ -134,8 +134,16 @@ public final class CollectionRemoveAction extends CollectionAction
             {
 				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
                 {
-                    PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-							(BigDecimal) ((Map) getCollection().getOwner()).get(partitionInfo.getFieldName()));
+                    BigDecimal partitionValue = null;
+                    if(getCollection() != null)
+                    {
+                    	partitionValue = (BigDecimal) ((Map) getCollection().getOwner()).get(partitionInfo.getFieldName());
+                    }
+                    else if(this.affectedOwner != null)
+                    {
+                    	partitionValue = (BigDecimal) ((Map) this.affectedOwner).get(partitionInfo.getFieldName());
+                    }
+					PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValue);
                 }
                 getPersister().remove(getKey(), getSession());
             }
