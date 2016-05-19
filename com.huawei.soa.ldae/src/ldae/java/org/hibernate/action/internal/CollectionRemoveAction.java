@@ -132,7 +132,7 @@ public final class CollectionRemoveAction extends CollectionAction
 
             try
             {
-				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
+				if (partitionInfo != null && partitionInfo.isPartition())
                 {
                     BigDecimal partitionValue = null;
                     if(getCollection() != null)
