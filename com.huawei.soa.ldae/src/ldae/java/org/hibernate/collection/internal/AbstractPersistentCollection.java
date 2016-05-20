@@ -553,11 +553,11 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 		if ( initialized ) {
 			return;
 		}
+		throwLazyInitializationExceptionIfNotConnected();
 		PartitionInfo partitionInfo = session.getFactory().getServiceRegistry()
                 .getService(PartitionInfoServices.class).getPartitionInfo((Map)this.owner);
 		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()) != null)
 		{
-		    throwLazyInitializationExceptionIfNotConnected();
 		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter("_bdf_default_partition_collection_filter");
 		    enableFilter.setParameter(partitionInfo.getFieldName(), ((Map)this.owner).get(partitionInfo.getFieldName()));
 		}
