@@ -112,7 +112,7 @@ import org.hibernate.type.Type;
 import org.jboss.logging.Logger;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Base implementation of the <tt>QueryableCollection</tt> interface.
@@ -1193,8 +1193,7 @@ public abstract class AbstractCollectionPersister
 				PartitionInfo partitionInfo = null;
 				if (needPartition)
 				{
-					partitionInfo = session.getFactory().getServiceRegistry()
-	                        .getService(PartitionInfoServices.class).getPartitionInfo(
+					partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
 							getElementPersister().getEntityName());
 					needPartition = partitionInfo != null && partitionInfo.isPartition();
 				}
@@ -1232,8 +1231,7 @@ public abstract class AbstractCollectionPersister
 
                     if (needPartition)
                     {
-                        BigDecimal currentPartitionValue = session.getFactory().getServiceRegistry()
-                                .getService(PartitionInfoServices.class)
+                        BigDecimal currentPartitionValue = PartitionIntegrationFactory.getInstance()
                                 .getCurrentPartitionValue();
                         if (null != currentPartitionValue)
                         {
@@ -1306,8 +1304,7 @@ public abstract class AbstractCollectionPersister
 					PartitionInfo partitionInfo = null;
 					if (needPartition)
 					{
-						partitionInfo = session.getFactory().getServiceRegistry()
-		                        .getService(PartitionInfoServices.class).getPartitionInfo(
+						partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
 								getElementPersister().getEntityName());
 						needPartition = partitionInfo != null && partitionInfo.isPartition();
 					}
@@ -1452,8 +1449,7 @@ public abstract class AbstractCollectionPersister
 					PartitionInfo partitionInfo = null;
 					if (needPartition)
 					{
-						partitionInfo = session.getFactory().getServiceRegistry()
-		                        .getService(PartitionInfoServices.class).getPartitionInfo(
+						partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
 								getElementPersister().getEntityName());
 						needPartition = partitionInfo != null && partitionInfo.isPartition();
 					}

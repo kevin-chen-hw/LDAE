@@ -143,7 +143,7 @@ import org.hibernate.type.VersionType;
 import org.jboss.logging.Logger;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Basic functionality for persisting an entity via JDBC
@@ -1638,15 +1638,13 @@ public abstract class AbstractEntityPersister
         {
 			StringBuilder selectString = new StringBuilder(getSQLSnapshotSelectString());
 			
-			PartitionInfoServices partiotionInfoService = session.getFactory().getServiceRegistry()
-                    .getService(PartitionInfoServices.class);
-			PartitionInfo partitionInfo = partiotionInfoService.getPartitionInfo(getEntityName());
+			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
 			boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
 			Type partitionType = null;
 			Object partitionValue = null;
 			if (needPartition)
 			{
-				partitionValue = partiotionInfoService.getCurrentPartitionValue();
+				partitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
 				partitionType = getPropertyType(partitionInfo.getFieldName());
 				if (null != partitionValue)
 				{
@@ -3474,8 +3472,7 @@ public abstract class AbstractEntityPersister
         final boolean callable = isUpdateCallable(j);
         final boolean useVersion = j == 0 && isVersioned();
 
-        PartitionInfo partitionInfo = session.getFactory().getServiceRegistry()
-                .getService(PartitionInfoServices.class).getPartitionInfo(getEntityName());
+        PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
         boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
         Type partitionType = null;
         Object partitionValue = null;
@@ -3629,8 +3626,7 @@ public abstract class AbstractEntityPersister
         }
 
         String sqlToExecute = sql;
-        PartitionInfo partitionInfo = session.getFactory().getServiceRegistry()
-                .getService(PartitionInfoServices.class).getPartitionInfo(getEntityName());
+        PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
         boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
         Type partitionType = null;
         Object partitionValue = null;

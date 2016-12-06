@@ -41,7 +41,7 @@ import org.hibernate.type.EntityType;
 import org.hibernate.type.Type;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Algorithms related to foreign key constraint transparency
@@ -257,16 +257,14 @@ public final class ForeignKeys {
 		}
 
 		// hit the database, after checking the session cache for a snapshot
-		PartitionInfoServices partiotionInfoService = session.getFactory().getServiceRegistry()
-                .getService(PartitionInfoServices.class);
-		PartitionInfo partitionInfo = partiotionInfoService.getPartitionInfo(
+		PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
 				persister.getEntityName());
 
 		try
 		{
 			if (partitionInfo != null && partitionInfo.isPartition() && entity != null)
 			{
-				partiotionInfoService.setCurrentPartitionValue(
+				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
 						(BigDecimal) ((Map) entity).get(partitionInfo.getFieldName()));
 			}
 			final Object[] snapshot = session.getPersistenceContext().getDatabaseSnapshot(
@@ -275,7 +273,7 @@ public final class ForeignKeys {
 		}
 		finally
 		{
-			partiotionInfoService.removeCurrentPartitionValue();
+			PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
 		}
 
 	}

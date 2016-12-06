@@ -41,7 +41,7 @@ import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.pretty.MessageHelper;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * The action for updating a collection
@@ -87,23 +87,21 @@ public final class CollectionUpdateAction extends CollectionAction {
 		else if ( !affectedByFilters && collection.empty() ) {
 			if ( !emptySnapshot ) {
 
-                PartitionInfoServices partiotionInfoService = getSession().getFactory().getServiceRegistry()
-                        .getService(PartitionInfoServices.class);
-                PartitionInfo partitionInfo = partiotionInfoService
+                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance()
                         .getPartitionInfo(getPersister().getOwnerEntityPersister().getEntityName());
 
                 try
                 {
                     if (partitionInfo != null && partitionInfo.isPartition())
                     {
-                        partiotionInfoService.setCurrentPartitionValue(
+                    	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
                                 (BigDecimal) ((Map) collection.getOwner()).get(partitionInfo.getFieldName()));
                     }
                     persister.remove(id, session);
                 }
                 finally
                 {
-                    partiotionInfoService.removeCurrentPartitionValue();
+                	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
                 }
 
 			}
@@ -117,23 +115,21 @@ public final class CollectionUpdateAction extends CollectionAction {
 			}
 			if ( !emptySnapshot ) {
 
-                PartitionInfoServices partiotionInfoService = getSession().getFactory().getServiceRegistry()
-                        .getService(PartitionInfoServices.class);
-                PartitionInfo partitionInfo = partiotionInfoService
+                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance()
                         .getPartitionInfo(
                         getPersister().getOwnerEntityPersister().getEntityName());
                 try
                 {
                     if (partitionInfo != null && partitionInfo.isPartition())
                     {
-                        partiotionInfoService.setCurrentPartitionValue(
+                    	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
                                 (BigDecimal) ((Map) collection.getOwner()).get(partitionInfo.getFieldName()));
                     }
                     persister.remove(id, session);
                 }
                 finally
                 {
-                    partiotionInfoService.removeCurrentPartitionValue();
+                	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
                 }
 			}
 			persister.recreate( collection, id, session );

@@ -60,7 +60,7 @@ import org.hibernate.type.Type;
 import org.jboss.logging.Logger;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Base class implementing {@link org.hibernate.collection.spi.PersistentCollection}
@@ -554,8 +554,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			return;
 		}
 		throwLazyInitializationExceptionIfNotConnected();
-		PartitionInfo partitionInfo = session.getFactory().getServiceRegistry()
-                .getService(PartitionInfoServices.class).getPartitionInfo((Map)this.owner);
+		PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
 		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()) != null)
 		{
 		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter("_bdf_default_partition_collection_filter");
@@ -685,8 +684,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 			if ( !session.isConnected() ) {
 				throw new HibernateException( "disconnected session" );
 			}
-			PartitionInfo partitionInfo = session.getFactory().getServiceRegistry()
-                    .getService(PartitionInfoServices.class).getPartitionInfo((Map)this.owner);
+			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
 	        if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()) != null)
 	        {
 	            Filter enableFilter = ((SessionImpl)getSession()).enableFilter("_bdf_default_partition_collection_filter");

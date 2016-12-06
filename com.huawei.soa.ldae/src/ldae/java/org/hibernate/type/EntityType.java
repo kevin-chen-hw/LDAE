@@ -50,7 +50,7 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.tuple.ElementWrapper;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Base for types which map associations to persistent entities.
@@ -551,14 +551,12 @@ public abstract class EntityType extends AbstractType implements AssociationType
         {
             return null;
         }
-        PartitionInfoServices partiotionInfoService = session.getFactory().getServiceRegistry()
-                .getService(PartitionInfoServices.class);
-        PartitionInfo partitionInfo = partiotionInfoService.getPartitionInfo((Map)owner);
+        PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)owner);
         if (partitionInfo.isPartition())
         {
             try
             {
-            	partiotionInfoService.setCurrentPartitionValue(
+            	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
                         (BigDecimal) ((Map) owner).get(partitionInfo.getFieldName()));
 
                 if (isReferenceToPrimaryKey())
@@ -573,7 +571,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
             }
             finally
             {
-            	partiotionInfoService.removeCurrentPartitionValue();
+            	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
             }
         }
         else

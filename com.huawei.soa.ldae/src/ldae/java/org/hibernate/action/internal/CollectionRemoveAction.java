@@ -40,7 +40,7 @@ import org.hibernate.event.spi.PreCollectionRemoveEventListener;
 import org.hibernate.persister.collection.CollectionPersister;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * The action for removing a collection
@@ -127,10 +127,9 @@ public final class CollectionRemoveAction extends CollectionAction
             // is replaced by null or a different collection
             // (if the collection is uninitialized, hibernate has no way of
             // knowing if the collection is actually empty without querying the db)
-            PartitionInfoServices partiotionInfoService = getSession().getFactory().getServiceRegistry()
-                    .getService(PartitionInfoServices.class);
-            PartitionInfo partitionInfo = partiotionInfoService
-                    .getPartitionInfo(getPersister().getOwnerEntityPersister().getEntityName());
+			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+							getPersister().getOwnerEntityPersister()
+									.getEntityName());
             try
             {
 				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
@@ -145,13 +144,13 @@ public final class CollectionRemoveAction extends CollectionAction
                     {
                         partitionValue = (BigDecimal) ((Map) this.affectedOwner).get(partitionInfo.getFieldName());
                     }
-                    partiotionInfoService.setCurrentPartitionValue(partitionValue);
+                    PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValue);
                 }
                 getPersister().remove(getKey(), getSession());
             }
             finally
             {
-                partiotionInfoService.removeCurrentPartitionValue();
+            	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
             }
         }
 

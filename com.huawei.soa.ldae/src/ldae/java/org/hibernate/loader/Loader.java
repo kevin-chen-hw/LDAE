@@ -97,7 +97,7 @@ import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
 import org.jboss.logging.Logger;
 
-import com.huawei.soa.ldae.partition.PartitionInfoServices;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Abstract superclass of object loading (and querying) strategies. This class implements
@@ -1912,19 +1912,17 @@ public abstract class Loader {
 		Object[] values = queryParameters.getFilteredPositionalParameterValues();
 		Type[] types = queryParameters.getFilteredPositionalParameterTypes();
 		
-		PartitionInfoServices partiotionInfoService = session.getFactory().getServiceRegistry()
-                .getService(PartitionInfoServices.class);
-		if (null != partiotionInfoService.getCurrentPartitionValue())
+		if (null != PartitionIntegrationFactory.getInstance().getCurrentPartitionValue())
 		{
 			Object[] newValues = Arrays.copyOf(values, values.length + 1);
-			newValues[values.length] = partiotionInfoService.getCurrentPartitionValue();
+			newValues[values.length] = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
 			Type[] newTypes = Arrays.copyOf(types, types.length + 1);
 			newTypes[types.length] = new BigDecimalType();
 			queryParameters.setFilteredPositionalParameterValues(newValues);
 			queryParameters.setFilteredPositionalParameterTypes(newTypes);
 			
 			String entityName = queryParameters.getOptionalEntityName();
-            String columnName = partiotionInfoService.getPartitionInfo(entityName).getColumnName();
+            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName();
             
             String tableAlias = this.getAliases()[0];
             sql = new StringBuilder(sql).append(" AND ").append(tableAlias).append(".").append(columnName)
