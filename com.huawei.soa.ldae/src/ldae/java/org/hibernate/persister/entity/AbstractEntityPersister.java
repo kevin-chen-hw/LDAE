@@ -1640,28 +1640,46 @@ public abstract class AbstractEntityPersister
 			
 			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
 			boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
-			Type partitionType = null;
-			Object partitionValue = null;
+ 			Type[] partitionType = null;
+			Object[] partitionValue = null;
 			if (needPartition)
 			{
 				partitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-				partitionType = getPropertyType(partitionInfo.getFieldName()[0]);
-				if (null != partitionValue)
+				if (null == partitionValue)
 				{
-					selectString.append(" and ").append(getRootAlias()).append('.')
-							.append(partitionInfo.getColumnName()[0]).append("=?");
+					needPartition = false;
 				}
+				else
+				{
+					partitionType = new Type[partitionInfo.getFieldName().length];
+					for(int i = 0; i < partitionInfo.getFieldName().length; i++)
+					{
+						partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
+					}
+					
+					for(String columnName : partitionInfo.getColumnName())
+					{
+						selectString.append(" and ").append(getRootAlias()).append('.').append(columnName).append("=?");
+					}
+				}
+				
 			}
 
             PreparedStatement ps = session.getTransactionCoordinator().getJdbcCoordinator().getStatementPreparer()
 					.prepareStatement(selectString.toString());
             try
             {
-                getIdentifierType().nullSafeSet(ps, id, 1, session);
+                int offset = 1;
+                getIdentifierType().nullSafeSet(ps, id, offset, session);
+                offset += getIdentifierColumnSpan();
 
-				if (needPartition && null != partitionValue)
+				if (needPartition)
 				{
-					partitionType.nullSafeSet(ps, partitionValue, 2, session);
+					for(int i = 0; i < partitionType.length; i++)
+					{
+						partitionType[i].nullSafeSet(ps, partitionValue[i], offset, session);
+						offset++;
+					}
 				}
 
                 // if ( isVersioned() ) getVersionType().nullSafeSet( ps, version, getIdentifierColumnSpan()+1, session
@@ -3474,14 +3492,23 @@ public abstract class AbstractEntityPersister
 
         PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
         boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
-        Type partitionType = null;
-        Object partitionValue = null;
+        Type[] partitionType = null;
+        Object[] partitionValue = null;
         if (needPartition)
         {
-            sqlToExecute += new StringBuilder(" and ").append(partitionInfo.getColumnName()).append(" = ?")
-            		.toString();
-            partitionType = getPropertyType(partitionInfo.getFieldName()[0]);
-            partitionValue = fields[getPropertyIndex(partitionInfo.getFieldName()[0])];
+        	for(String columnName : partitionInfo.getColumnName())
+        	{
+        		sqlToExecute += new StringBuilder(" and ").append(columnName).append("=?")
+        				.toString();
+        	}
+        	
+        	partitionType = new Type[partitionInfo.getFieldName().length];
+        	partitionValue = new Object[partitionInfo.getFieldName().length];
+        	for(int i = 0; i < partitionInfo.getFieldName().length; i++)
+        	{
+        		partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
+        		partitionValue[i] = fields[getPropertyIndex(partitionInfo.getFieldName()[i])];
+        	}
         }
 
         if (LOG.isTraceEnabled())
@@ -3546,8 +3573,10 @@ public abstract class AbstractEntityPersister
 
                 if (needPartition)
                 {
-                    partitionType.nullSafeSet(update, partitionValue, index, session);
-
+                    for(int i = 0; i < partitionValue.length; i++)
+                    {
+                    	partitionType[i].nullSafeSet(update, partitionValue[i], index, session);
+                    }
                 }
 
                 if (useBatch)
@@ -3629,14 +3658,23 @@ public abstract class AbstractEntityPersister
         String sqlToExecute = sql;
         PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
         boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
-        Type partitionType = null;
-        Object partitionValue = null;
+        Type[] partitionType = null;
+        Object[] partitionValue = null;
         if (needPartition)
         {
-            sqlToExecute += new StringBuilder(" and ").append(partitionInfo.getColumnName()).append(" = ?")
-            		.toString();
-            partitionType = getPropertyType(partitionInfo.getFieldName()[0]);
-            partitionValue = ((Map) object).get(partitionInfo.getFieldName()[0]);
+        	for(String columnName : partitionInfo.getColumnName())
+        	{
+        		sqlToExecute += new StringBuilder(" and ").append(columnName).append("=?")
+        				.toString();
+        	}
+        	
+        	partitionType = new Type[partitionInfo.getFieldName().length];
+        	partitionValue = new Object[partitionInfo.getFieldName().length];
+        	for(int i = 0; i < partitionInfo.getFieldName().length; i++)
+        	{
+        		partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
+        		partitionValue[i] = ((Map) object).get(partitionInfo.getFieldName()[i]);
+        	}
         }
 
         try
@@ -3691,7 +3729,11 @@ public abstract class AbstractEntityPersister
 
                 if (needPartition)
                 {
-                    partitionType.nullSafeSet(delete, partitionValue, index, session);
+                	for(int i = 0; i < partitionValue.length; i++)
+                    {
+                    	partitionType[i].nullSafeSet(delete, partitionValue[i], index, session);
+                    	index++;
+                    }
                 }
 
                 if (useBatch)
