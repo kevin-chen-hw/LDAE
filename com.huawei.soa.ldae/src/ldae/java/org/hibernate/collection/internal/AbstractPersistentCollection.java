@@ -558,9 +558,23 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()[0]) != null)
 		{
 		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding.filter");
-		    for(String parameterName : enableFilter.getFilterDefinition().getParameterNames())
+		    Iterator<String> parameterNameIterator = enableFilter.getFilterDefinition().getParameterNames().iterator();
+		    int i = 0;
+		    Map entity = ((Map)this.owner);
+		    while (parameterNameIterator.hasNext())
 		    {
-		    	enableFilter.setParameter(parameterName, ((Map) this.owner).get(parameterName));
+		    	String parameterName = parameterNameIterator.next();
+		    	Object paramValue = null;
+		    	if (i < partitionInfo.getFieldName().length)
+		    	{
+		    		paramValue = entity.get(partitionInfo.getFieldName()[i]);
+		    	}
+		    	if(null == paramValue)
+		    	{
+		    		paramValue = entity.get(parameterName);
+		    	}
+		    	enableFilter.setParameter(parameterName, paramValue);
+		    	i++;
 		    }
 		}
 		try{
