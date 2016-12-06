@@ -24,7 +24,6 @@
 package org.hibernate.type;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Map;
@@ -551,14 +550,18 @@ public abstract class EntityType extends AbstractType implements AssociationType
         {
             return null;
         }
+        
         PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)owner);
         if (partitionInfo.isPartition())
         {
             try
             {
-            	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-                        (BigDecimal) ((Map) owner).get(partitionInfo.getFieldName()));
-
+            	Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+            	for(int i = 0; i< partitionInfo.getFieldName().length; i++)
+            	{
+            		partitionValues[i] = ((Map) owner).get(partitionInfo.getFieldName()[i]);
+            	}
+            	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                 if (isReferenceToPrimaryKey())
                 {
                     return resolveIdentifier((Serializable) value, session);

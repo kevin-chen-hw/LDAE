@@ -1922,7 +1922,7 @@ public abstract class Loader {
 			queryParameters.setFilteredPositionalParameterTypes(newTypes);
 			
 			String entityName = queryParameters.getOptionalEntityName();
-            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName();
+            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName()[0];
             
             String tableAlias = this.getAliases()[0];
             sql = new StringBuilder(sql).append(" AND ").append(tableAlias).append(".").append(columnName)

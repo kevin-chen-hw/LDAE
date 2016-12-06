@@ -24,7 +24,6 @@
 package org.hibernate.action.internal;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.Map;
 
 import org.hibernate.AssertionFailure;
@@ -134,17 +133,21 @@ public final class CollectionRemoveAction extends CollectionAction
             {
 				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
                 {
-                    BigDecimal partitionValue = null;
+                    Map entity = null;
                     if (getCollection() != null)
                     {
-                        partitionValue = (BigDecimal) ((Map) getCollection().getOwner())
-                                .get(partitionInfo.getFieldName());
+                    	entity = (Map)getCollection().getOwner();
                     }
                     else if (this.affectedOwner != null)
                     {
-                        partitionValue = (BigDecimal) ((Map) this.affectedOwner).get(partitionInfo.getFieldName());
+                    	entity = (Map) this.affectedOwner;
                     }
-                    PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValue);
+                    Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+    				for(int i = 0; i < partitionInfo.getFieldName().length; i++)
+    				{
+    					partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+    				}
+    				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                 }
                 getPersister().remove(getKey(), getSession());
             }

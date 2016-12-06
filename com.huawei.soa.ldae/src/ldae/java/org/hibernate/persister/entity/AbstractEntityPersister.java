@@ -1645,11 +1645,11 @@ public abstract class AbstractEntityPersister
 			if (needPartition)
 			{
 				partitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-				partitionType = getPropertyType(partitionInfo.getFieldName());
+				partitionType = getPropertyType(partitionInfo.getFieldName()[0]);
 				if (null != partitionValue)
 				{
 					selectString.append(" and ").append(getRootAlias()).append('.')
-							.append(partitionInfo.getColumnName()).append("=?");
+							.append(partitionInfo.getColumnName()[0]).append("=?");
 				}
 			}
 
@@ -3478,9 +3478,10 @@ public abstract class AbstractEntityPersister
         Object partitionValue = null;
         if (needPartition)
         {
-            sqlToExecute += new StringBuilder(" and ").append(partitionInfo.getColumnName()).append(" = ?").toString();
-            partitionType = getPropertyType(partitionInfo.getFieldName());
-            partitionValue = fields[getPropertyIndex(partitionInfo.getFieldName())];
+            sqlToExecute += new StringBuilder(" and ").append(partitionInfo.getColumnName()).append(" = ?")
+            		.toString();
+            partitionType = getPropertyType(partitionInfo.getFieldName()[0]);
+            partitionValue = fields[getPropertyIndex(partitionInfo.getFieldName()[0])];
         }
 
         if (LOG.isTraceEnabled())
@@ -3632,9 +3633,10 @@ public abstract class AbstractEntityPersister
         Object partitionValue = null;
         if (needPartition)
         {
-            sqlToExecute += new StringBuilder(" and ").append(partitionInfo.getColumnName()).append(" = ?").toString();
-            partitionType = getPropertyType(partitionInfo.getFieldName());
-            partitionValue = ((Map) object).get(partitionInfo.getFieldName());
+            sqlToExecute += new StringBuilder(" and ").append(partitionInfo.getColumnName()).append(" = ?")
+            		.toString();
+            partitionType = getPropertyType(partitionInfo.getFieldName()[0]);
+            partitionValue = ((Map) object).get(partitionInfo.getFieldName()[0]);
         }
 
         try

@@ -4,9 +4,9 @@ public class PartitionInfo
 {
     private final boolean partition;
 
-    private String columnName;
+    private String[] columnNames;
 
-    private String fieldName;
+    private String[] fieldNames;
 
     public PartitionInfo(boolean partition)
     {
@@ -18,24 +18,24 @@ public class PartitionInfo
     }
 
 
-    public String getColumnName()
+    public String[] getColumnName()
     {
-        return columnName;
+        return columnNames;
     }
 
-    public void setColumnName(String columnName)
+    public void setColumnName(String[] columnName)
     {
-        this.columnName = columnName;
+        this.columnNames = columnName;
     }
 
-    public String getFieldName()
+    public String[] getFieldName()
     {
-        return fieldName;
+        return fieldNames;
     }
 
-    public void setFieldName(String fieldName)
+    public void setFieldName(String[] fieldName)
     {
-        this.fieldName = fieldName;
+        this.fieldNames = fieldName;
     }
 
 

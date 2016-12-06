@@ -255,7 +255,7 @@ public abstract class AbstractLoadPlanBasedLoader
             queryParameters.setFilteredPositionalParameterValues(newValues);
             queryParameters.setFilteredPositionalParameterTypes(newTypes);
             String entityName = queryParameters.getOptionalEntityName();
-            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName();
+            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName()[0];
             String tableAlias = ((AbstractLoadQueryDetails) this.getStaticLoadQuery()).getRootTableAlias();
             sql = new StringBuilder(sql).append(" AND ").append(tableAlias).append(".").append(columnName)
                     .append("=?").toString();

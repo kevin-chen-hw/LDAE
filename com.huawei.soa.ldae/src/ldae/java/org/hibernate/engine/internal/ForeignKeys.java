@@ -31,6 +31,7 @@ import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
 import org.hibernate.TransientObjectException;
 import org.hibernate.bytecode.instrumentation.spi.LazyPropertyInitializer;
+import org.hibernate.engine.internal.NonNullableTransientDependencies;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.persister.entity.EntityPersister;
@@ -264,8 +265,12 @@ public final class ForeignKeys {
 		{
 			if (partitionInfo != null && partitionInfo.isPartition() && entity != null)
 			{
-				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-						(BigDecimal) ((Map) entity).get(partitionInfo.getFieldName()));
+				Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+				for(int i = 0; i < partitionInfo.getFieldName().length; i++)
+				{
+					partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+				}
+				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
 			}
 			final Object[] snapshot = session.getPersistenceContext().getDatabaseSnapshot(
 					persister.getIdentifier(entity, session), persister);

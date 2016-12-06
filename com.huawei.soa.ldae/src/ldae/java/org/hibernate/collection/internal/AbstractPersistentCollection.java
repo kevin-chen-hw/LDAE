@@ -555,10 +555,13 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 		}
 		throwLazyInitializationExceptionIfNotConnected();
 		PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
-		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()) != null)
+		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()[0]) != null)
 		{
-		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter("_bdf_default_partition_collection_filter");
-		    enableFilter.setParameter(partitionInfo.getFieldName(), ((Map)this.owner).get(partitionInfo.getFieldName()));
+		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding.filter");
+		    for(String parameterName : enableFilter.getFilterDefinition().getParameterNames())
+		    {
+		    	enableFilter.setParameter(parameterName, ((Map) this.owner).get(parameterName));
+		    }
 		}
 		try{
 		    withTemporarySessionIfNeeded(
@@ -572,7 +575,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 	        );
 		}finally{
 		    if (getSession()!=null) {
-		        ((SessionImpl)getSession()).disableFilter("_bdf_default_partition_collection_filter");		        
+		        ((SessionImpl)getSession()).disableFilter(getRole().replace('.', '_')+"_default_sharding.filter");		        
 		    }
 		}
 		
@@ -685,15 +688,18 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 				throw new HibernateException( "disconnected session" );
 			}
 			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
-	        if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()) != null)
+	        if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()[0]) != null)
 	        {
-	            Filter enableFilter = ((SessionImpl)getSession()).enableFilter("_bdf_default_partition_collection_filter");
-	            enableFilter.setParameter(partitionInfo.getFieldName(), ((Map)this.owner).get(partitionInfo.getFieldName()));
+	        	Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding.filter");
+			    for(String parameterName : enableFilter.getFilterDefinition().getParameterNames())
+			    {
+			    	enableFilter.setParameter(parameterName, ((Map) this.owner).get(parameterName));
+			    }
 	        }
 	        try{
 	            session.initializeCollection( this, false );
 	        }finally{
-	            ((SessionImpl)getSession()).disableFilter("_bdf_default_partition_collection_filter");
+	            ((SessionImpl)getSession()).disableFilter(getRole().replace('.', '_')+"_default_sharding.filter");
 	        }
 		}
 	}
