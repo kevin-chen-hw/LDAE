@@ -26,67 +26,76 @@ package org.hibernate.type;
 import java.io.Serializable;
 import java.util.Comparator;
 
+import org.hibernate.HibernateException;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.type.descriptor.java.ByteTypeDescriptor;
-import org.hibernate.type.descriptor.sql.TinyIntTypeDescriptor;
+import org.hibernate.type.descriptor.java.LongTypeDescriptor;
+import org.hibernate.type.descriptor.sql.BigIntTypeDescriptor;
 
 /**
- * A type that maps between {@link java.sql.Types#TINYINT TINYINT} and {@link Byte}
+ * A type that maps between {@link java.sql.Types#BIGINT BIGINT} and {@link Long}
  *
  * @author Gavin King
  * @author Steve Ebersole
  */
-public class ByteType
-		extends AbstractSingleColumnStandardBasicType<Byte>
-		implements PrimitiveType<Byte>, DiscriminatorType<Byte>, VersionType<Byte> {
+public class LongType
+		extends AbstractSingleColumnStandardBasicType<Long>
+		implements PrimitiveType<Long>, DiscriminatorType<Long>, VersionType<Long> {
 
-	public static final ByteType INSTANCE = new ByteType();
+	public static final LongType INSTANCE = new LongType();
 
-	private static final Byte ZERO = (byte) 0;
+	private static final Long ZERO = (long) 0;
 
-	public ByteType() {
-		super( TinyIntTypeDescriptor.INSTANCE, ByteTypeDescriptor.INSTANCE );
+	public LongType() {
+		super( BigIntTypeDescriptor.INSTANCE, LongTypeDescriptor.INSTANCE );
 	}
+
 	@Override
 	public String getName() {
-		return "byte";
+		return "long";
 	}
 
 	@Override
 	public String[] getRegistrationKeys() {
-		return new String[] { getName(), byte.class.getName(), Byte.class.getName() };
+		return new String[] { getName(), long.class.getName(), Long.class.getName() };
 	}
+
 	@Override
 	public Serializable getDefaultValue() {
 		return ZERO;
 	}
+
 	@Override
 	public Class getPrimitiveClass() {
-		return byte.class;
+		return long.class;
 	}
+
 	@Override
-	public String objectToSQLString(Byte value, Dialect dialect) {
-		return toString( value );
+	public Long stringToObject(String xml) throws Exception {
+		return Long.valueOf( xml );
 	}
+
 	@Override
-	public Byte stringToObject(String xml) {
-		return fromString( xml );
+	public Long next(Long current, SessionImplementor session) {
+		if(current == null)
+		{
+			throw new HibernateException("Optimistic-lock Version can not be null.");
+		}
+		return current + 1L;
 	}
+
 	@Override
-	public Byte fromStringValue(String xml) {
-		return fromString( xml );
-	}
-	@Override
-	public Byte next(Byte current, SessionImplementor session) {
-		return (byte) ( current + 1 );
-	}
-	@Override
-	public Byte seed(SessionImplementor session) {
+	public Long seed(SessionImplementor session) {
 		return ZERO;
 	}
+
 	@Override
-	public Comparator<Byte> getComparator() {
+	public Comparator<Long> getComparator() {
 		return getJavaTypeDescriptor().getComparator();
+	}
+
+	@Override
+	public String objectToSQLString(Long value, Dialect dialect) throws Exception {
+		return value.toString();
 	}
 }
