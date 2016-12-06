@@ -1912,8 +1912,8 @@ public abstract class Loader {
 		Object[] values = queryParameters.getFilteredPositionalParameterValues();
 		Type[] types = queryParameters.getFilteredPositionalParameterTypes();
 		
-	Object[] currentPartitinValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-    if (null != currentPartitinValue)
+	Object[] currentPartitoinValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
+    if (null != currentPartitoinValue)
     {
         String entityName = queryParameters.getOptionalEntityName();
         PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName);
@@ -1926,7 +1926,7 @@ public abstract class Loader {
         	StringBuilder sqlSB = new StringBuilder(sql);
         	String[] fieldNames = partitionInfo.getFieldName();
         	
-        	int fieldSizeToAppend = currentPartitinValue.length < fieldNames.length ? currentPartitinValue.length
+        	int fieldSizeToAppend = currentPartitoinValue.length < fieldNames.length ? currentPartitoinValue.length
         			: fieldNames.length;
         	
         	Object[] newValues = Arrays.copyOf(values, values.length + fieldSizeToAppend);
@@ -1934,9 +1934,9 @@ public abstract class Loader {
         	
         	for(int i = 0; i < fieldSizeToAppend; i++)
         	{
-        		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getFieldName()[i])
+        		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getColumnName()[i])
         		.append("=?");
-        		newValues[values.length + i] = currentPartitinValue[i];
+        		newValues[values.length + i] = currentPartitoinValue[i];
         		newTypes[types.length] = entityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
         	}
         	

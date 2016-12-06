@@ -562,7 +562,8 @@ public abstract class EntityType extends AbstractType implements AssociationType
             		partitionValues[i] = ((Map) owner).get(partitionInfo.getFieldName()[i]);
             	}
             	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
-                if (isReferenceToPrimaryKey())
+                
+            	if (isReferenceToPrimaryKey())
                 {
                     return resolveIdentifier((Serializable) value, session);
                 }

@@ -131,7 +131,7 @@ public final class CollectionRemoveAction extends CollectionAction
 									.getEntityName());
             try
             {
-				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
+				if (partitionInfo != null && partitionInfo.isPartition())
                 {
                     Map entity = null;
                     if (getCollection() != null)

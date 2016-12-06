@@ -1675,7 +1675,7 @@ public abstract class AbstractEntityPersister
 
 				if (needPartition)
 				{
-					for(int i = 0; i < partitionType.length; i++)
+					for(int i = 0; i < partitionValue.length; i++)
 					{
 						partitionType[i].nullSafeSet(ps, partitionValue[i], offset, session);
 						offset++;
@@ -3498,7 +3498,7 @@ public abstract class AbstractEntityPersister
         {
         	for(String columnName : partitionInfo.getColumnName())
         	{
-        		sqlToExecute += new StringBuilder(" and ").append(columnName).append("=?")
+        		sqlToExecute += new StringBuilder(" and ").append(columnName).append(" = ?")
         				.toString();
         	}
         	
@@ -3576,6 +3576,7 @@ public abstract class AbstractEntityPersister
                     for(int i = 0; i < partitionValue.length; i++)
                     {
                     	partitionType[i].nullSafeSet(update, partitionValue[i], index, session);
+                    	index++;
                     }
                 }
 
@@ -3664,7 +3665,7 @@ public abstract class AbstractEntityPersister
         {
         	for(String columnName : partitionInfo.getColumnName())
         	{
-        		sqlToExecute += new StringBuilder(" and ").append(columnName).append("=?")
+        		sqlToExecute += new StringBuilder(" and ").append(columnName).append(" = ?")
         				.toString();
         	}
         	

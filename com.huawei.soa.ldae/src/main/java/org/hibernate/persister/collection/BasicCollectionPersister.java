@@ -255,7 +255,7 @@ public class BasicCollectionPersister extends AbstractCollectionPersister {
 			{
 				for(String columnName : partitionInfo.getColumnName())
 				{
-					sql += new StringBuilder(" and ").append(columnName).append("=?").toString();
+					sql += new StringBuilder(" and ").append(columnName).append(" = ?").toString();
 				}
 				
 				partitionType = new Type[partitionInfo.getFieldName().length];

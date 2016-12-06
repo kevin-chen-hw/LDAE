@@ -1535,9 +1535,9 @@ public abstract class AbstractCollectionPersister
 					{
 						partitionType = new Type[partitionInfo.getFieldName().length];
 						
-						for(String colunmName : partitionInfo.getColumnName())
+						for(String columnName : partitionInfo.getColumnName())
 						{
-							sql += new StringBuilder(" and ").append(colunmName).append(" = ?").toString();
+							sql += new StringBuilder(" and ").append(columnName).append(" = ?").toString();
 						}
 						
 						for(int i = 0; i < partitionInfo.getFieldName().length; i++)
@@ -1592,10 +1592,10 @@ public abstract class AbstractCollectionPersister
                             {
                             	Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance()
                                         .getCurrentPartitionValue();
-                                if (null != currentPartitionValue && getElementType().isEntityType())
+                                if (null == currentPartitionValue && getElementType().isEntityType())
                                 {
                                 	currentPartitionValue = new Object[partitionInfo.getFieldName().length];
-                                	for(int i = 0; i < partitionType.length; i++)
+                                	for(int i = 0; i < partitionInfo.getFieldName().length; i++)
                                 	{
                                 		currentPartitionValue[i] = ((Map) entry).get(partitionInfo.getFieldName()[i]);
                                 	}
@@ -1777,7 +1777,7 @@ public abstract class AbstractCollectionPersister
 								{
 									for(int k = 0; k < partitionType.length; k++)
 									{
-										partitionType[k].nullSafeSet(st, currentPartitionValue[i], offset, session);
+										partitionType[k].nullSafeSet(st, currentPartitionValue[k], offset, session);
 										offset++;
 									}
 								}

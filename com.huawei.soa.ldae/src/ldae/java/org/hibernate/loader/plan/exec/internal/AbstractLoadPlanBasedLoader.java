@@ -247,8 +247,8 @@ public abstract class AbstractLoadPlanBasedLoader
 
         Object[] values = queryParameters.getFilteredPositionalParameterValues();
         Type[] types = queryParameters.getFilteredPositionalParameterTypes();
-        Object[] currentPartitinValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-        if (null != currentPartitinValue)
+        Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
+        if (null != currentPartitionValue)
         {
             String entityName = queryParameters.getOptionalEntityName();
             PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName);
@@ -261,7 +261,7 @@ public abstract class AbstractLoadPlanBasedLoader
             	StringBuilder sqlSB = new StringBuilder(sql);
             	String[] fieldNames = partitionInfo.getFieldName();
             	
-            	int fieldSizeToAppend = currentPartitinValue.length < fieldNames.length ? currentPartitinValue.length
+            	int fieldSizeToAppend = currentPartitionValue.length < fieldNames.length ? currentPartitionValue.length
             			: fieldNames.length;
             	
             	Object[] newValues = Arrays.copyOf(values, values.length + fieldSizeToAppend);
@@ -269,9 +269,9 @@ public abstract class AbstractLoadPlanBasedLoader
             	
             	for(int i = 0; i < fieldSizeToAppend; i++)
             	{
-            		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getFieldName()[i])
+            		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getColumnName()[i])
             		.append("=?");
-            		newValues[values.length + i] = currentPartitinValue[i];
+            		newValues[values.length + i] = currentPartitionValue[i];
             		newTypes[types.length] = entityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
             	}
             	
