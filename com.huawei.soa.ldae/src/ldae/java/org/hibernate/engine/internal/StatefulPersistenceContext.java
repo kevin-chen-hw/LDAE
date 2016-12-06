@@ -817,9 +817,19 @@ public class StatefulPersistenceContext implements PersistenceContext {
 			if ( old == coll ) {
 				throw new AssertionFailure( "bug adding collection twice" );
 			}
+			
+			/**
+			 * 此处处理原因：不同主键的entity对象，具有相同的外键值，导致session中的Collection只能存在一份
+			 * 另一份从session中移除，但是仍然被对象引用，在使用中出现No Session的错误，所以此处将异常抛出，提醒用户检查脏数据
+			 */
+			StringBuilder errorMessage = new StringBuilder();
+			errorMessage.append("Duplicated values of the relationship [").append(coll.getRole())
+				.append("] key field!");
+					
+			throw new HibernateException(errorMessage.toString());
 			// or should it actually throw an exception?
-			old.unsetSession( session );
-			collectionEntries.remove( old );
+			//old.unsetSession( session );
+			//collectionEntries.remove( old );
 			// watch out for a case where old is still referenced
 			// somewhere in the object graph! (which is a user error)
 		}
