@@ -1224,7 +1224,6 @@ public abstract class AbstractCollectionPersister
                 	{
                 		partitionType[i] = partitionEntityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
                 	}
-                	
                 }
 
 				if ( useBatch ) {
@@ -1678,6 +1677,59 @@ public abstract class AbstractCollectionPersister
 				String sql = getSQLInsertRowString();
 				int i = 0;
 				int count = 0;
+				
+				boolean needPartition = false;
+				EntityPersister partitionEntityPersister = null;
+				if(getElementType().isEntityType())
+				{
+					needPartition = true;
+					partitionEntityPersister = getElementPersister();
+				}
+				else if(getCollectionType() instanceof MapType)
+				{
+					needPartition = true;
+					partitionEntityPersister = getOwnerEntityPersister();
+				}
+				
+				Type[] partitionType = null;
+				PartitionInfo partitionInfo = null;
+				if (needPartition)
+				{
+					partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+							partitionEntityPersister.getEntityName());
+					needPartition = partitionInfo != null && partitionInfo.isPartition();
+				}
+				
+				if (needPartition)
+				{
+					if(getCollectionType() instanceof MapType)
+					{
+						StringBuilder firstPart = new StringBuilder(sql.substring(0, sql.indexOf(')')));
+						StringBuilder secondPart = new StringBuilder(sql.substring(sql.indexOf(')')+1,
+								sql.length() - 1));
+						for(String columnName : partitionInfo.getColumnName())
+						{
+							firstPart.append(", ").append(columnName);
+							secondPart.append(", ?");
+						}
+						sql = firstPart.append(')').append(secondPart).append(')').toString();
+					}
+					else if (getElementType().isEntityType())
+					{
+						for(String columnName : partitionInfo.getColumnName())
+						{
+							sql += new StringBuilder(" and ").append(columnName).append(" = ?").toString();
+						}
+					}
+					
+					partitionType = new Type[partitionInfo.getFieldName().length];
+					
+					for(int j = 0; j < partitionInfo.getFieldName().length; j++)
+					{
+						partitionType[j] = partitionEntityPersister.getPropertyType(partitionInfo.getFieldName()[j]);
+					}
+				}
+				
 				while ( entries.hasNext() ) {
 					int offset = 1;
 					Object entry = entries.next();
@@ -1715,7 +1767,21 @@ public abstract class AbstractCollectionPersister
 							if ( hasIndex /* && !indexIsFormula */) {
 								offset = writeIndex( st, collection.getIndex( entry, i, this ), offset, session );
 							}
-							writeElement( st, collection.getElement( entry ), offset, session );
+							offset = writeElement( st, collection.getElement( entry ), offset, session );
+							
+							if(needPartition)
+							{
+								Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance()
+										.getCurrentPartitionValue();
+								if(null != currentPartitionValue)
+								{
+									for(int k = 0; k < partitionType.length; k++)
+									{
+										partitionType[k].nullSafeSet(st, currentPartitionValue[i], offset, session);
+										offset++;
+									}
+								}
+							}
 
 							if ( useBatch ) {
 								session.getTransactionCoordinator().getJdbcCoordinator().getBatch( insertBatchKey ).addToBatch();
