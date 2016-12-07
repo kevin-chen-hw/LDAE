@@ -553,11 +553,12 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 		if ( initialized ) {
 			return;
 		}
-		throwLazyInitializationExceptionIfNotConnected();
+		
 		PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
 		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()[0]) != null)
 		{
-		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding.filter");
+			throwLazyInitializationExceptionIfNotConnected();
+			Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding_filter");
 		    Iterator<String> parameterNamesIterator = enableFilter.getFilterDefinition().getParameterNames().iterator();
 		    int i = 0;
 		    Map entity = ((Map)this.owner);
@@ -704,7 +705,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 	        try{
 	            session.initializeCollection( this, false );
 	        }finally{
-	            ((SessionImpl)getSession()).disableFilter(getRole().replace('.', '_')+"_default_sharding._filter");
+	            ((SessionImpl)getSession()).disableFilter(getRole().replace('.', '_')+"_default_sharding_filter");
 	        }
 		}
 	}
