@@ -68,34 +68,33 @@ public final class CollectionRecreateAction extends CollectionAction {
 		final PersistentCollection collection = getCollection();
 		
 		preRecreate();
-		
-		PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-				getPersister().getOwnerEntityPersister().getEntityName());
-		
-		try 
-		{
-			if(partitionInfo != null && partitionInfo.isPartition())
-			{
-				Map entity = null;
-				if(getCollection() != null)
-				{
-					entity = (Map) getCollection().getOwner();
-				}
-				Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
-				for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-				{
-					partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
-				}
-				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
-			}
-			getPersister().recreate(collection, getKey(), getSession());
-			
-		}
-		finally
-		{
-			PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
-		}
-		
+
+        PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                getPersister().getOwnerEntityPersister().getEntityName());
+
+        try
+        {
+            if (partitionInfo != null && partitionInfo.isPartition())
+            {
+                Map entity = null;
+                if (getCollection() != null)
+                {
+                    entity = (Map) getCollection().getOwner();
+                }
+                Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                {
+                    partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                }
+                PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+            }
+            getPersister().recreate(collection, getKey(), getSession());
+        }
+        finally
+        {
+            PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+        }
+
 		getSession().getPersistenceContext().getCollectionEntry( collection ).afterAction( collection );
 		evict();
 		postRecreate();

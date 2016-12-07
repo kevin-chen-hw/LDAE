@@ -1,7 +1,6 @@
 package com.huawei.soa.ldae.partition;
 
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
 import java.util.Map;
 
 public class PartitionIntegrationFactory

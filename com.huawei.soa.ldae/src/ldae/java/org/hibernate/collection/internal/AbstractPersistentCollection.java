@@ -553,21 +553,20 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 		if ( initialized ) {
 			return;
 		}
-		
 		PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
-		if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()[0]) != null)
+        if (partitionInfo.isPartition() && ((Map) this.owner).get(partitionInfo.getFieldName()[0]) != null)
 		{
-			throwLazyInitializationExceptionIfNotConnected();
-			Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding_filter");
-		    Iterator<String> parameterNamesIterator = enableFilter.getFilterDefinition().getParameterNames().iterator();
-		    int i = 0;
-		    Map entity = ((Map)this.owner);
-		    while (parameterNamesIterator.hasNext())
-		    {
-		    	String parameterName = parameterNamesIterator.next();
-		    	enableFilter.setParameter(parameterName, entity.get(parameterName));
-		    	i++;
-		    }
+		    throwLazyInitializationExceptionIfNotConnected();
+		    Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding_filter");
+            Iterator<String> parameterNamesIterator = enableFilter.getFilterDefinition().getParameterNames().iterator();
+            int i = 0;
+            Map entity = ((Map) this.owner);
+            while (parameterNamesIterator.hasNext())
+            {
+                String parameterName = (String) parameterNamesIterator.next();
+                enableFilter.setParameter(parameterName, entity.get(parameterName));
+                i++;
+            }
 		}
 		try{
 		    withTemporarySessionIfNeeded(
@@ -581,7 +580,7 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 	        );
 		}finally{
 		    if (getSession()!=null) {
-		        ((SessionImpl)getSession()).disableFilter(getRole().replace('.', '_')+"_default_sharding_filter");		        
+                ((SessionImpl) getSession()).disableFilter(getRole().replace('.', '_') + "_default_sharding_filter");
 		    }
 		}
 		
@@ -694,18 +693,19 @@ public abstract class AbstractPersistentCollection implements Serializable, Pers
 				throw new HibernateException( "disconnected session" );
 			}
 			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)this.owner);
-	        if (partitionInfo.isPartition() && ((Map)this.owner).get(partitionInfo.getFieldName()[0]) != null)
+            if (partitionInfo.isPartition() && ((Map) this.owner).get(partitionInfo.getFieldName()[0]) != null)
 	        {
-	        	Filter enableFilter = ((SessionImpl)getSession()).enableFilter(getRole().replace('.', '_')+"_default_sharding_filter");
-			    for(String parameterName : enableFilter.getFilterDefinition().getParameterNames())
-			    {
-			    	enableFilter.setParameter(parameterName, ((Map) this.owner).get(parameterName));
-			    }
+                Filter enableFilter = ((SessionImpl) getSession()).enableFilter(getRole().replace('.', '_')
+                        + "_default_sharding_filter");
+                for (String parameterName : enableFilter.getFilterDefinition().getParameterNames())
+                {
+                    enableFilter.setParameter(parameterName, ((Map) this.owner).get(parameterName));
+                }
 	        }
 	        try{
 	            session.initializeCollection( this, false );
 	        }finally{
-	            ((SessionImpl)getSession()).disableFilter(getRole().replace('.', '_')+"_default_sharding_filter");
+                ((SessionImpl) getSession()).disableFilter(getRole().replace('.', '_') + "_default_sharding_filter");
 	        }
 		}
 	}

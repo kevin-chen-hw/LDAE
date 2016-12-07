@@ -86,30 +86,30 @@ public final class CollectionUpdateAction extends CollectionAction {
 		else if ( !affectedByFilters && collection.empty() ) {
 			if ( !emptySnapshot ) {
 
-                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance()
-                        .getPartitionInfo(getPersister().getOwnerEntityPersister().getEntityName());
+                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                        getPersister().getOwnerEntityPersister().getEntityName());
 
                 try
                 {
                     if (partitionInfo != null && partitionInfo.isPartition())
                     {
-                    	Map entity = null;
+                        Map entity = null;
                         if (getCollection() != null)
                         {
-                        	entity = (Map)getCollection().getOwner();
+                            entity = (Map) getCollection().getOwner();
                         }
                         Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
-         				for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-         				{
-         					partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
-         				}
-         				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+                        for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                        {
+                            partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                        }
+                        PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                     }
                     persister.remove(id, session);
                 }
                 finally
                 {
-                	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+                    PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
                 }
 
 			}
@@ -122,64 +122,60 @@ public final class CollectionUpdateAction extends CollectionAction {
 				);
 			}
 			if ( !emptySnapshot ) {
-
-                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance()
-                        .getPartitionInfo(
+                PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
                         getPersister().getOwnerEntityPersister().getEntityName());
                 try
                 {
                     if (partitionInfo != null && partitionInfo.isPartition())
                     {
-                    	Map entity = null;
+                        Map entity = null;
                         if (getCollection() != null)
                         {
-                        	entity = (Map)getCollection().getOwner();
+                            entity = (Map) getCollection().getOwner();
                         }
                         Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
-         				for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-         				{
-         					partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
-         				}
-         				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+                        for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                        {
+                            partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                        }
+                        PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                     }
                     persister.remove(id, session);
                 }
                 finally
                 {
-                	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+                    PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
                 }
 			}
 			persister.recreate( collection, id, session );
 		}
 		else {
-			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance()
-		            .getPartitionInfo(
-		            getPersister().getOwnerEntityPersister().getEntityName());
-		    try
-		    {
-		        if (partitionInfo != null && partitionInfo.isPartition())
-		        {
-		        	Map entity = null;
-		            if (getCollection() != null)
-		            {
-		            	entity = (Map)getCollection().getOwner();
-		            }
-		            Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
-					for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-					{
-						partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
-					}
-					PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
-		        }
-		        
-				persister.deleteRows( collection, id, session );
-				persister.updateRows( collection, id, session );
-				persister.insertRows( collection, id, session );
-		        }
-		    finally
-		    {
-		    	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
-		    }
+            PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                    getPersister().getOwnerEntityPersister().getEntityName());
+            try
+            {
+                if (partitionInfo != null && partitionInfo.isPartition())
+                {
+                    Map entity = null;
+                    if (getCollection() != null)
+                    {
+                        entity = (Map) getCollection().getOwner();
+                    }
+                    Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                    for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                    {
+                        partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                    }
+                    PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+                }
+			persister.deleteRows( collection, id, session );
+			persister.updateRows( collection, id, session );
+			persister.insertRows( collection, id, session );
+            }
+            finally
+            {
+                PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+            }
 		}
 
 		getSession().getPersistenceContext().getCollectionEntry( collection ).afterAction( collection );
