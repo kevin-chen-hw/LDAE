@@ -23,11 +23,11 @@ public class MultiLangPropertyExpression implements Criterion
         return op;
     }
     
-    public String getPropertyName(){
+    public String getPropertryName(){
         return propertyName;
     }
     
-    public String getOtherPropertyName(){
+    public String getOtherPropertryName(){
         return otherPropertyName;
     }
     

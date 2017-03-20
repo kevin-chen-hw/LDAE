@@ -25,7 +25,7 @@ public class DebugContext
 {
     private Mapping mappingCache;
     
-    private Map<String, PersistentClass> entityPersistntClassMapCache;
+    private Map<String, PersistentClass> entityPersistentClassMapCache;
     
     private Map<String, org.hibernate.mapping.FetchProfile> cfgFetchProfilesCache;
     
@@ -49,14 +49,14 @@ public class DebugContext
         this.mappingCache = mappingCache;
     }
 
-    public Map<String, PersistentClass> getEntityPersistntClassMapCache()
+    public Map<String, PersistentClass> getEntityPersistentClassMapCache()
     {
-        return entityPersistntClassMapCache;
+        return entityPersistentClassMapCache;
     }
 
-    public void setEntityPersistntClassMapCache(Map<String, PersistentClass> entityPersistntClassMapCache)
+    public void setEntityPersistentClassMapCache(Map<String, PersistentClass> entityPersistntClassMapCache)
     {
-        this.entityPersistntClassMapCache = entityPersistntClassMapCache;
+        this.entityPersistentClassMapCache = entityPersistntClassMapCache;
     }
 
     public Map<String, org.hibernate.mapping.FetchProfile> getCfgFetchProfilesCache()

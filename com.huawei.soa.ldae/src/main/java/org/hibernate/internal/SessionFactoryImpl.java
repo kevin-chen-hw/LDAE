@@ -372,7 +372,7 @@ public final class SessionFactoryImpl
 		        final PersistentClass model = (PersistentClass) classes.next();
 		        entityPersistntClassMapCache.put(model.getEntityName(), model);
 		    }
-		    debugContext.setEntityPersistntClassMapCache(entityPersistntClassMapCache);
+		    debugContext.setEntityPersistentClassMapCache(entityPersistntClassMapCache);
 		    this.classMetadata = new HashMap<String, ClassMetadata>();
 		}
 		else
@@ -1143,7 +1143,7 @@ public final class SessionFactoryImpl
 
 	private EntityPersister initializeEntityPersisterFirst(String entityName)
 	{
-	    PersistentClass model = debugContext.getEntityPersistntClassMapCache().get(entityName);
+	    PersistentClass model = debugContext.getEntityPersistentClassMapCache().get(entityName);
 	    
 	    if(model == null)
 	    {

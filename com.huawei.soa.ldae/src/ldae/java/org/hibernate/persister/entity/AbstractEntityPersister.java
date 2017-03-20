@@ -161,7 +161,7 @@ public abstract class AbstractEntityPersister
 	private static final CoreMessageLogger LOG = Logger.getMessageLogger( CoreMessageLogger.class, AbstractEntityPersister.class.getName() );
 
 	public static final String ENTITY_CLASS = "class";
-	private final Object mutexCreateEntityLoaderLockDebugMode = new Object();
+	private final Object mutexCreateEntityLoaderLockForDebugMode = new Object();
 
 	// moved up from AbstractEntityPersister ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	private final SessionFactoryImplementor factory;
@@ -4529,7 +4529,7 @@ public abstract class AbstractEntityPersister
                 
                 if(o == null)
                 {
-                    synchronized (mutexCreateEntityLoaderLockDebugMode)
+                    synchronized (mutexCreateEntityLoaderLockForDebugMode)
                     {
                         if(o == null)
                         {
@@ -4569,7 +4569,7 @@ public abstract class AbstractEntityPersister
                 
                 if(o == null)
                 {
-                    synchronized (mutexCreateEntityLoaderLockDebugMode)
+                    synchronized (mutexCreateEntityLoaderLockForDebugMode)
                     {
                         if (o == null)
                         {
