@@ -71,6 +71,7 @@ import org.hibernate.engine.jdbc.batch.internal.BasicBatchKey;
 import org.hibernate.engine.spi.CachedNaturalIdValueSource;
 import org.hibernate.engine.spi.CascadeStyle;
 import org.hibernate.engine.spi.CascadeStyles;
+import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
@@ -142,6 +143,8 @@ import org.hibernate.type.TypeHelper;
 import org.hibernate.type.VersionType;
 import org.jboss.logging.Logger;
 
+import utils.DebugUtils;
+
 import com.huawei.soa.ldae.partition.PartitionInfo;
 import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
@@ -158,6 +161,7 @@ public abstract class AbstractEntityPersister
 	private static final CoreMessageLogger LOG = Logger.getMessageLogger( CoreMessageLogger.class, AbstractEntityPersister.class.getName() );
 
 	public static final String ENTITY_CLASS = "class";
+	private final Object mutexCreateEntityLoaderLockDebugMode = new Object();
 
 	// moved up from AbstractEntityPersister ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	private final SessionFactoryImplementor factory;
@@ -4383,7 +4387,10 @@ public abstract class AbstractEntityPersister
     {
         doLateInit();
 
-        createLoaders();
+        if(!DebugUtils.isDebug())
+        {
+            createLoaders();
+        }
         createUniqueKeyLoaders();
         createQueryLoader();
 
@@ -4515,7 +4522,29 @@ public abstract class AbstractEntityPersister
             // Next, we consider whether an 'internal' fetch profile has been set.
             // This indicates a special fetch profile Hibernate needs applied
             // (for its merge loading process e.g.).
-            return (UniqueEntityLoader) getLoaders().get(session.getLoadQueryInfluencers().getInternalFetchProfile());
+            if(DebugUtils.isDebug())
+            {
+                String internalFetchProfile = session.getLoadQueryInfluencers().getInternalFetchProfile();
+                Object o = loaders.get(internalFetchProfile);
+                
+                if(o == null)
+                {
+                    synchronized (mutexCreateEntityLoaderLockDebugMode)
+                    {
+                        if(o == null)
+                        {
+                            o = createLazyLoader(internalFetchProfile);
+                            loaders.put(internalFetchProfile, o);
+                        }
+                    }
+                }
+            
+                return (UniqueEntityLoader)o;
+            }
+            else
+            {
+                return (UniqueEntityLoader) getLoaders().get(session.getLoadQueryInfluencers().getInternalFetchProfile());  
+            }
         }
         else if (isAffectedByEnabledFetchProfiles(session))
         {
@@ -4533,8 +4562,113 @@ public abstract class AbstractEntityPersister
         }
         else
         {
+            if(DebugUtils.isDebug())
+            {
+                LockMode lockMode = lockOptions.getLockMode();
+                Object o = loaders.get(lockMode);
+                
+                if(o == null)
+                {
+                    synchronized (mutexCreateEntityLoaderLockDebugMode)
+                    {
+                        if (o == null)
+                        {
+                            o = createLazyLoader(lockMode);
+                            loaders.put(lockMode, o);
+                        }
+                    }
+                }
+                
+                return (UniqueEntityLoader) o;
+            }
+            else
+            {
             return (UniqueEntityLoader) getLoaders().get(lockOptions.getLockMode());
+            }
         }
+    }
+    
+    protected UniqueEntityLoader createLazyLoader(Object key)
+    {
+        if(null == key)
+        {
+            return null;
+        }
+        
+        if(loaders.containsKey(key))
+        {
+            return (UniqueEntityLoader) loaders.get(key);
+        }
+        
+        if(key instanceof LockMode)
+        {
+            LockMode mode = (LockMode) key;
+            
+            switch (mode)
+            {
+                case NONE:
+                    return this.createEntityLoader(LockMode.NONE);
+                    
+                case READ:
+                    return this.createEntityLoader(LockMode.READ);
+                    
+                case OPTIMISTIC:
+                    return this.createEntityLoader(LockMode.OPTIMISTIC);
+                    
+                case OPTIMISTIC_FORCE_INCREMENT:
+                    return this.createEntityLoader(LockMode.OPTIMISTIC_FORCE_INCREMENT);
+            }
+            
+            boolean disableForUpdate = (this.getSubclassTableSpan() > 1) && this.hasSubclasses()
+                    && !this.getFactory().getDialect().supportsOuterJoinForUpdate();
+            
+            if(disableForUpdate)
+            {
+                return this.createEntityLoader(LockMode.READ);
+            }
+            
+            switch(mode)
+            {
+                case UPGRADE:
+                    return this.createEntityLoader(LockMode.UPGRADE);
+
+                case UPGRADE_NOWAIT:
+                    return this.createEntityLoader(LockMode.UPGRADE_NOWAIT);
+                    
+                case UPGRADE_SKIPLOCKED:
+                    return this.createEntityLoader(LockMode.UPGRADE_SKIPLOCKED);
+                    
+                case FORCE:
+                    return this.createEntityLoader(LockMode.FORCE);
+                    
+                case PESSIMISTIC_READ:
+                    return this.createEntityLoader(LockMode.PESSIMISTIC_READ);
+                    
+                case PESSIMISTIC_WRITE:
+                    return this.createEntityLoader(LockMode.PESSIMISTIC_WRITE);
+                    
+                case PESSIMISTIC_FORCE_INCREMENT:
+                    return this.createEntityLoader(LockMode.PESSIMISTIC_FORCE_INCREMENT);
+                    
+                default:
+                    return null;
+            }
+        }
+        
+        if(key instanceof String)
+        {
+            if("merge".equals(key))
+            {
+                return new CascadeEntityLoader(this, CascadingActions.MERGE, this.getFactory());
+            }
+            
+            if("refresh".equals(key))
+            {
+                return new CascadeEntityLoader(this, CascadingActions.REFRESH, this.getFactory());
+            }
+        }
+        
+        return null;
     }
 
     private boolean isAllNull(Object[] array, int tableNumber)

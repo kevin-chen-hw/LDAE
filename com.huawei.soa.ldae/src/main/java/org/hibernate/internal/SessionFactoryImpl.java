@@ -151,6 +151,8 @@ import org.hibernate.type.Type;
 import org.hibernate.type.TypeResolver;
 import org.jboss.logging.Logger;
 
+import utils.DebugUtils;
+
 
 /**
  * Concrete implementation of the <tt>SessionFactory</tt> interface. Has the following
@@ -213,6 +215,8 @@ public final class SessionFactoryImpl
 	private final transient CustomEntityDirtinessStrategy customEntityDirtinessStrategy;
 	private final transient CurrentTenantIdentifierResolver currentTenantIdentifierResolver;
 
+	private final transient DebugContext debugContext =  new DebugContext();
+	
 	@SuppressWarnings( {"unchecked", "ThrowableResultOfMethodCallIgnored"})
 	public SessionFactoryImpl(
 			final Configuration cfg,
@@ -253,6 +257,11 @@ public final class SessionFactoryImpl
 			}
 		};
 
+		if(DebugUtils.isDebug())
+		{
+		    debugContext.setMappingCache(mapping);
+		}
+		
 		this.settings = settings;
 
 		this.properties = new Properties();
@@ -335,6 +344,13 @@ public final class SessionFactoryImpl
 		final String cacheRegionPrefix = settings.getCacheRegionPrefix() == null ? "" : settings.getCacheRegionPrefix() + ".";
 		final PersisterFactory persisterFactory = serviceRegistry.getService( PersisterFactory.class );
 
+		if(DebugUtils.isDebug())
+		{
+		    debugContext.setRegionFactory(regionFactory);
+		    debugContext.setCacheRegionPrefix(cacheRegionPrefix);
+		    debugContext.setPersisterFactory(persisterFactory);
+		}
+		
 		// todo : consider removing this silliness and just have EntityPersister directly implement ClassMetadata
 		//		EntityPersister.getClassMetadata() for the internal impls simply "return this";
 		//		collapsing those would allow us to remove this "extra" Map
@@ -343,67 +359,98 @@ public final class SessionFactoryImpl
 
 		entityPersisters = new HashMap();
 		Map entityAccessStrategies = new HashMap();
-		Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
 		classes = cfg.getClassMappings();
-		while ( classes.hasNext() ) {
-			final PersistentClass model = (PersistentClass) classes.next();
-			model.prepareTemporaryTables( mapping, getDialect() );
-			final String cacheRegionName = cacheRegionPrefix + model.getRootClass().getCacheRegionName();
-			// cache region is defined by the root-class in the hierarchy...
-			EntityRegionAccessStrategy accessStrategy = ( EntityRegionAccessStrategy ) entityAccessStrategies.get( cacheRegionName );
-			if ( accessStrategy == null && settings.isSecondLevelCacheEnabled() ) {
-				final AccessType accessType = AccessType.fromExternalName( model.getCacheConcurrencyStrategy() );
-				if ( accessType != null ) {
-					LOG.tracef( "Building shared cache region for entity data [%s]", model.getEntityName() );
-					EntityRegion entityRegion = regionFactory.buildEntityRegion( cacheRegionName, properties, CacheDataDescriptionImpl.decode( model ) );
-					accessStrategy = entityRegion.buildAccessStrategy( accessType );
-					entityAccessStrategies.put( cacheRegionName, accessStrategy );
-					cacheAccess.addCacheRegion( cacheRegionName, entityRegion );
-				}
-			}
-
-			NaturalIdRegionAccessStrategy naturalIdAccessStrategy = null;
-			if ( model.hasNaturalId() && model.getNaturalIdCacheRegionName() != null ) {
-				final String naturalIdCacheRegionName = cacheRegionPrefix + model.getNaturalIdCacheRegionName();
-				naturalIdAccessStrategy = ( NaturalIdRegionAccessStrategy ) entityAccessStrategies.get( naturalIdCacheRegionName );
-
-				if ( naturalIdAccessStrategy == null && settings.isSecondLevelCacheEnabled() ) {
-					final CacheDataDescriptionImpl cacheDataDescription = CacheDataDescriptionImpl.decode( model );
-
-					NaturalIdRegion naturalIdRegion = null;
-					try {
-						naturalIdRegion = regionFactory.buildNaturalIdRegion( naturalIdCacheRegionName, properties,
-								cacheDataDescription );
-					}
-					catch ( UnsupportedOperationException e ) {
-						LOG.warnf(
-								"Shared cache region factory [%s] does not support natural id caching; " +
-										"shared NaturalId caching will be disabled for not be enabled for %s",
-								regionFactory.getClass().getName(),
-								model.getEntityName()
-						);
-					}
-
-					if (naturalIdRegion != null) {
-						naturalIdAccessStrategy = naturalIdRegion.buildAccessStrategy( regionFactory.getDefaultAccessType() );
-						entityAccessStrategies.put( naturalIdCacheRegionName, naturalIdAccessStrategy );
-						cacheAccess.addCacheRegion(  naturalIdCacheRegionName, naturalIdRegion );
-					}
-				}
-			}
-
-			EntityPersister cp = persisterFactory.createEntityPersister(
-					model,
-					accessStrategy,
-					naturalIdAccessStrategy,
-					this,
-					mapping
-			);
-			entityPersisters.put( model.getEntityName(), cp );
-			classMeta.put( model.getEntityName(), cp.getClassMetadata() );
+		
+		if(DebugUtils.isDebug())
+		{
+		    debugContext.setEntityAccessStrategies(entityAccessStrategies);
+		    
+		    Map<String, PersistentClass> entityPersistntClassMapCache = new HashMap<String, PersistentClass>();
+		    
+		    while(classes.hasNext())
+		    {
+		        final PersistentClass model = (PersistentClass) classes.next();
+		        entityPersistntClassMapCache.put(model.getEntityName(), model);
+		    }
+		    debugContext.setEntityPersistntClassMapCache(entityPersistntClassMapCache);
+		    this.classMetadata = new HashMap<String, ClassMetadata>();
 		}
-		this.classMetadata = Collections.unmodifiableMap(classMeta);
+		else
+		{
+		        Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
+		        
+		        while (classes.hasNext()) 
+		        {
+		            final PersistentClass model = (PersistentClass) classes.next();
+		            model.prepareTemporaryTables(mapping, getDialect());
+		            
+		            final String cacheRegionName = cacheRegionPrefix + model.getRootClass().getCacheRegionName();
+		            
+		            // cache region is defined by the root-class in the hierarchy...
+		            EntityRegionAccessStrategy accessStrategy = (EntityRegionAccessStrategy) entityAccessStrategies
+		                    .get(cacheRegionName);
+		            
+		            if (accessStrategy == null && settings.isSecondLevelCacheEnabled())
+		            {
+		                final AccessType accessType = AccessType.fromExternalName(model.getCacheConcurrencyStrategy());
+		                
+		                if (accessType != null)
+		                {
+		                    LOG.tracef( "Building shared cache region for entity data [%s]", model.getEntityName());
+		                    
+		                    EntityRegion entityRegion = regionFactory.buildEntityRegion(cacheRegionName, properties,
+		                            CacheDataDescriptionImpl.decode(model));
+		                    accessStrategy = entityRegion.buildAccessStrategy(accessType);
+		                    entityAccessStrategies.put(cacheRegionName, accessStrategy);
+		                    cacheAccess.addCacheRegion(cacheRegionName, entityRegion);
+		                }
+		            }
 
+		            NaturalIdRegionAccessStrategy naturalIdAccessStrategy = null;
+		            
+		            if (model.hasNaturalId() && model.getNaturalIdCacheRegionName() != null)
+		            {
+		                final String naturalIdCacheRegionName = cacheRegionPrefix + model.getNaturalIdCacheRegionName();
+		                
+		                naturalIdAccessStrategy = (NaturalIdRegionAccessStrategy) entityAccessStrategies.get(naturalIdCacheRegionName);
+
+		                if (naturalIdAccessStrategy == null && settings.isSecondLevelCacheEnabled())
+		                {
+		                    final CacheDataDescriptionImpl cacheDataDescription = CacheDataDescriptionImpl.decode( model );
+
+		                    NaturalIdRegion naturalIdRegion = null;
+		                    
+		                    try
+		                    {
+		                        naturalIdRegion = regionFactory.buildNaturalIdRegion( naturalIdCacheRegionName, properties,
+		                                cacheDataDescription );
+		                    }
+		                    catch ( UnsupportedOperationException e)
+		                    {
+		                        LOG.warnf("Shared cache region factory [%s] does not support natural id caching; " 
+		                                + "shared NaturalId caching will be disabled for not be enabled for %s",
+		                                regionFactory.getClass().getName(), model.getEntityName());
+		                    }
+
+		                    if (naturalIdRegion != null) 
+		                    {
+		                        naturalIdAccessStrategy = naturalIdRegion.buildAccessStrategy( regionFactory
+		                                .getDefaultAccessType() );
+		                        entityAccessStrategies.put( naturalIdCacheRegionName, naturalIdAccessStrategy );
+		                        cacheAccess.addCacheRegion(  naturalIdCacheRegionName, naturalIdRegion );
+		                    }
+		                }
+		            }
+
+		            EntityPersister cp = persisterFactory.createEntityPersister(model, accessStrategy,
+		                    naturalIdAccessStrategy, this, mapping);
+		            entityPersisters.put(model.getEntityName(), cp);
+		            classMeta.put(model.getEntityName(), cp.getClassMetadata());
+		        }
+		        
+		        this.classMetadata = Collections.unmodifiableMap(classMeta);
+		}
+		
 		Map<String,Set<String>> tmpEntityToCollectionRoleMap = new HashMap<String,Set<String>>();
 		collectionPersisters = new HashMap<String,CollectionPersister>();
 		Map<String,CollectionMetadata> tmpCollectionMetadata = new HashMap<String,CollectionMetadata>();
@@ -467,14 +514,19 @@ public final class SessionFactoryImpl
 		);
 
 		// after *all* persisters and named queries are registered
-		for ( EntityPersister persister : entityPersisters.values() ) {
-			persister.generateEntityDefinition();
-		}
+		if(!DebugUtils.isDebug())
+        {
+            for (EntityPersister persister : entityPersisters.values())
+            {
+                persister.generateEntityDefinition();
+            }
 
-		for ( EntityPersister persister : entityPersisters.values() ) {
-			persister.postInstantiate();
-			registerEntityNameResolvers( persister );
-		}
+            for (EntityPersister persister : entityPersisters.values())
+            {
+                persister.postInstantiate();
+                registerEntityNameResolvers( persister );
+            }
+        }
 		for ( CollectionPersister persister : collectionPersisters.values() ) {
 			persister.postInstantiate();
 		}
@@ -525,43 +577,55 @@ public final class SessionFactoryImpl
 
 		// this needs to happen after persisters are all ready to go...
 		this.fetchProfiles = new HashMap();
-		itr = cfg.iterateFetchProfiles();
-		while ( itr.hasNext() ) {
-			final org.hibernate.mapping.FetchProfile mappingProfile =
-					( org.hibernate.mapping.FetchProfile ) itr.next();
-			final FetchProfile fetchProfile = new FetchProfile( mappingProfile.getName() );
-			for ( org.hibernate.mapping.FetchProfile.Fetch mappingFetch : mappingProfile.getFetches() ) {
-				// resolve the persister owning the fetch
-				final String entityName = getImportedClassName( mappingFetch.getEntity() );
-				final EntityPersister owner = entityName == null
-						? null
-						: entityPersisters.get( entityName );
-				if ( owner == null ) {
-					throw new HibernateException(
-							"Unable to resolve entity reference [" + mappingFetch.getEntity()
-									+ "] in fetch profile [" + fetchProfile.getName() + "]"
-					);
-				}
+		if(DebugUtils.isDebug()){
+		    debugContext.setCfgFetchProfilesCache(cfg.getFetchProfiles());
+		}else{
+		    itr = cfg.iterateFetchProfiles();
+		    
+	        while ( itr.hasNext() ) {
+	            final org.hibernate.mapping.FetchProfile mappingProfile =(org.hibernate.mapping.FetchProfile) itr.next();
+	            final FetchProfile fetchProfile = new FetchProfile( mappingProfile.getName() );
+	            
+	            for ( org.hibernate.mapping.FetchProfile.Fetch mappingFetch : mappingProfile.getFetches() ) {
+	                // resolve the persister owning the fetch
+	                final String entityName = getImportedClassName( mappingFetch.getEntity() );
+	                final EntityPersister owner = entityName == null ? null
+	                                                                  : entityPersisters.get( entityName );
+	                
+	                if ( owner == null ) {
+	                    throw new HibernateException(
+	                            "Unable to resolve entity reference [" +
+                                mappingFetch.getEntity() + "] in fetch profile [" +
+	                                    fetchProfile.getName() + "]");
+	                }
 
-				// validate the specified association fetch
-				Type associationType = owner.getPropertyType( mappingFetch.getAssociation() );
-				if ( associationType == null || !associationType.isAssociationType() ) {
-					throw new HibernateException( "Fetch profile [" + fetchProfile.getName() + "] specified an invalid association" );
-				}
+	                // validate the specified association fetch
+	                Type associationType = owner.getPropertyType( mappingFetch.getAssociation() );
+	                
+	                if ( associationType == null ||
+	                        !associationType.isAssociationType() ) {
+	                    throw new HibernateException( "Fetch profile [" + 
+	                        fetchProfile.getName() + 
+	                        "] specified an invalid association" );
+	                }
 
-				// resolve the style
-				final Fetch.Style fetchStyle = Fetch.Style.parse( mappingFetch.getStyle() );
+	                // resolve the style
+	                final Fetch.Style fetchStyle = Fetch.Style.parse( mappingFetch.getStyle() );
 
-				// then construct the fetch instance...
-				fetchProfile.addFetch( new Association( owner, mappingFetch.getAssociation() ), fetchStyle );
-				((Loadable) owner).registerAffectingFetchProfile( fetchProfile.getName() );
-			}
-			fetchProfiles.put( fetchProfile.getName(), fetchProfile );
+	                // then construct the fetch instance...
+	                fetchProfile.addFetch( new Association(owner,
+	                        mappingFetch.getAssociation()), fetchStyle);
+	                ((Loadable) owner).registerAffectingFetchProfile(fetchProfile.getName());
+	            }
+	            
+	            fetchProfiles.put( fetchProfile.getName(), fetchProfile );
+	        }
 		}
 
 		this.customEntityDirtinessStrategy = determineCustomEntityDirtinessStrategy();
-		this.currentTenantIdentifierResolver = determineCurrentTenantIdentifierResolver( cfg.getCurrentTenantIdentifierResolver() );
-		this.transactionEnvironment = new TransactionEnvironmentImpl( this );
+		this.currentTenantIdentifierResolver = determineCurrentTenantIdentifierResolver(cfg.
+		        getCurrentTenantIdentifierResolver());
+		this.transactionEnvironment = new TransactionEnvironmentImpl(this);
 		this.observer.sessionFactoryCreated( this );
 	}
 
@@ -1058,12 +1122,106 @@ public final class SessionFactoryImpl
 
 	public EntityPersister getEntityPersister(String entityName) throws MappingException {
 		EntityPersister result = entityPersisters.get(entityName);
+		
+		if(DebugUtils.isDebug() && (result == null))
+		{
+		    synchronized (debugContext.getMutexCreateEntityPersisterLock())
+		    {
+		        if(result == null)
+		        {
+		            result = initializeEntityPersisterFirst(entityName);
+		        }
+		    }
+		}
+		
 		if ( result == null ) {
 			throw new MappingException( "Unknown entity: " + entityName );
 		}
 		return result;
 	}
 
+	private EntityPersister initializeEntityPersisterFirst(String entityName)
+	{
+	    PersistentClass model = debugContext.getEntityPersistntClassMapCache().get(entityName);
+	    
+	    if(model == null)
+	    {
+	        return null;
+	    }
+	    
+	    model.prepareTemporaryTables(debugContext.getMappingCache(), getDialect());
+	    
+	    final String cacheRegionName = debugContext.getCacheRegionPrefix() + model.getRootClass().getCacheRegionName();
+	    
+	    // cache region is defined by the root-class in the hierachy...
+	    EntityRegionAccessStrategy accessStrategy = (EntityRegionAccessStrategy)debugContext
+	            .getEntityAccessStrategies().get(cacheRegionName);
+	    
+	    if((accessStrategy == null) && settings.isSecondLevelCacheEnabled())
+	    {
+	        final AccessType accessType = AccessType.fromExternalName(model.getCacheConcurrencyStrategy());
+	        
+	        if(accessType != null)
+	        {
+	            LOG.tracef("Building shared cache region for entity data [%s]", model.getEntityName());
+	            
+	            EntityRegion entityRegion = debugContext.getRegionFactory().buildEntityRegion(cacheRegionName,
+	                    properties, CacheDataDescriptionImpl.decode(model));
+	            accessStrategy = entityRegion.buildAccessStrategy(accessType);
+	            debugContext.getEntityAccessStrategies().put(cacheRegionName, accessStrategy);
+	            cacheAccess.addCacheRegion(cacheRegionName, entityRegion);
+	        }
+	    }
+	
+	    NaturalIdRegionAccessStrategy naturalIdAccessStrategy = null;
+	    
+	    if(model.hasNaturalId() && (model.getNaturalIdCacheRegionName() != null))
+	    {
+	        final String naturalIdCacheRegionName = debugContext.getCacheRegionPrefix()
+	                + model.getNaturalIdCacheRegionName();
+	        naturalIdAccessStrategy = (NaturalIdRegionAccessStrategy) debugContext.getEntityAccessStrategies().get(
+	                naturalIdCacheRegionName);
+	        
+	        if((naturalIdAccessStrategy == null) && settings.isSecondLevelCacheEnabled())
+	        {
+	            final CacheDataDescriptionImpl cacheDataDescription = CacheDataDescriptionImpl.decode(model);
+	            
+	            NaturalIdRegion naturalIdRegion = null;
+	            
+	            try
+	            {
+	                naturalIdRegion = debugContext.getRegionFactory().buildNaturalIdRegion(naturalIdCacheRegionName,
+	                        properties, cacheDataDescription);
+	            }
+	            catch(UnsupportedOperationException e)
+	            {
+	                LOG.warnf("Shared cache region factory [%s] does not support natural id caching; "
+	                        + "shared NaturalId caching will be disabled for not be enabled for %s", debugContext
+	                        .getRegionFactory().getClass().getName(), model.getEntityName());
+	            }
+	            
+	            if(naturalIdRegion != null)
+	            {
+	                naturalIdAccessStrategy = naturalIdRegion.buildAccessStrategy(debugContext.getRegionFactory()
+	                        .getDefaultAccessType());
+	                debugContext.getEntityAccessStrategies().put(naturalIdCacheRegionName, naturalIdAccessStrategy);
+	                cacheAccess.addCacheRegion(naturalIdCacheRegionName, naturalIdRegion);
+	            }
+	        }
+	    }
+	    
+	    EntityPersister cp = debugContext.getPersisterFactory().createEntityPersister(model, accessStrategy,
+	            naturalIdAccessStrategy, this, debugContext.getMappingCache());
+	    this.entityPersisters.put(model.getEntityName(), cp);
+	    this.classMetadata.put(model.getEntityName(), cp.getClassMetadata());
+	    
+	    cp.generateEntityDefinition();
+	    cp.postInstantiate();
+	    registerEntityNameResolvers(cp);
+	    
+	    return cp;
+	}
+	
 	@Override
 	public Map<String, CollectionPersister> getCollectionPersisters() {
 		return collectionPersisters;
@@ -1183,7 +1341,17 @@ public final class SessionFactoryImpl
 	}
 
 	public ClassMetadata getClassMetadata(String entityName) throws HibernateException {
-		return classMetadata.get( entityName );
+		if(DebugUtils.isDebug() && !entityPersisters.containsKey(entityName))
+		{
+		    synchronized (debugContext.getMutexCreateEntityPersisterLock())
+            {
+		        if(!entityPersisters.containsKey(entityName))
+		        {
+		            initializeEntityPersisterFirst(entityName);
+		        }
+            }
+		}
+	    return classMetadata.get( entityName );
 	}
 
 	/**
