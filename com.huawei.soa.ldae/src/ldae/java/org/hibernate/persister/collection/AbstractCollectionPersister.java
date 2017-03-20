@@ -106,9 +106,11 @@ import org.hibernate.type.AnyType;
 import org.hibernate.type.AssociationType;
 import org.hibernate.type.CollectionType;
 import org.hibernate.type.CompositeType;
+import org.hibernate.type.CustomCollectionType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.MapType;
 import org.hibernate.type.Type;
+import org.hibernate.usertype.UserCollectionType;
 import org.jboss.logging.Logger;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
@@ -1195,7 +1197,7 @@ public abstract class AbstractCollectionPersister
 					needPartition = true;
 					partitionEntityPersister = getElementPersister();
 				}
-				else if(getCollectionType() instanceof MapType)
+				else if(getCollectionType() instanceof MapType || isMultiLangCollectionType(collectionType))
 				{
 					needPartition = true;
 					partitionEntityPersister = getOwnerEntityPersister();
@@ -1303,6 +1305,23 @@ public abstract class AbstractCollectionPersister
 
 	protected BasicBatchKey recreateBatchKey;
 
+	//判断是否属于扩展的多语言UserCollection类型
+	private boolean isMultiLangCollectionType(CollectionType collectionType)
+	{
+	    boolean result = false;
+	    if(collectionType instanceof CustomCollectionType)
+	    {
+	        UserCollectionType userType = ((CustomCollectionType)collectionType).getUserType();
+	        if(userType!=null)
+	        {
+	            result="com.huawei.soa.daf.impl.service.type.MultiLangCollectionType"
+	                    .equals(userType.getClass().getName());
+	        }
+	        
+	    }
+	        return result;
+	}
+	
 	@Override
 	public void recreate(PersistentCollection collection, Serializable id, SessionImplementor session)
 			throws HibernateException {
@@ -1324,13 +1343,14 @@ public abstract class AbstractCollectionPersister
 					int count = 0;
 					
 					boolean needPartition = false;
+					
 					EntityPersister partitionEntityPersister = null;
 					if(getElementType().isEntityType())
 					{
 						needPartition = true;
 						partitionEntityPersister = getElementPersister();
 					}
-					else if(getCollectionType() instanceof MapType)
+					else if(collectionType instanceof MapType || isMultiLangCollectionType(collectionType))
 					{
 						needPartition = true;
 						partitionEntityPersister = getOwnerEntityPersister();
@@ -1349,7 +1369,7 @@ public abstract class AbstractCollectionPersister
 					
 					if (needPartition)
 					{
-						if(getCollectionType() instanceof MapType)
+						if(getCollectionType() instanceof MapType  || isMultiLangCollectionType(collectionType))
 						{
 							StringBuilder firstPart = new StringBuilder(sql.substring(0, sql.indexOf(')')));
 							StringBuilder secondPart = new StringBuilder(sql.substring(sql.indexOf(')')+1,
@@ -1514,7 +1534,7 @@ public abstract class AbstractCollectionPersister
 						needPartition = true;
 						partitionEntityPersister = getElementPersister();
 					}
-					else if(getCollectionType() instanceof MapType)
+					else if(getCollectionType() instanceof MapType || isMultiLangCollectionType(collectionType))
 					{
 						needPartition = true;
 						partitionEntityPersister = getOwnerEntityPersister();
@@ -1685,7 +1705,7 @@ public abstract class AbstractCollectionPersister
 					needPartition = true;
 					partitionEntityPersister = getElementPersister();
 				}
-				else if(getCollectionType() instanceof MapType)
+				else if(getCollectionType() instanceof MapType || isMultiLangCollectionType(collectionType))
 				{
 					needPartition = true;
 					partitionEntityPersister = getOwnerEntityPersister();
@@ -1702,7 +1722,7 @@ public abstract class AbstractCollectionPersister
 				
 				if (needPartition)
 				{
-					if(getCollectionType() instanceof MapType)
+					if(getCollectionType() instanceof MapType || isMultiLangCollectionType(collectionType))
 					{
 						StringBuilder firstPart = new StringBuilder(sql.substring(0, sql.indexOf(')')));
 						StringBuilder secondPart = new StringBuilder(sql.substring(sql.indexOf(')')+1,
