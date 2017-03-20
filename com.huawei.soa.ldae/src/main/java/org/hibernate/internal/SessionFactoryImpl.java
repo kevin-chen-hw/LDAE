@@ -357,12 +357,12 @@ public final class SessionFactoryImpl
 		//
 		// todo : similar for CollectionPersister/CollectionMetadata
 
-		entityPersisters = new HashMap();
 		Map entityAccessStrategies = new HashMap();
 		classes = cfg.getClassMappings();
 		
 		if(DebugUtils.isDebug())
 		{
+		    entityPersisters = new ConcurrentHashMap<String, EntityPersister>();
 		    debugContext.setEntityAccessStrategies(entityAccessStrategies);
 		    
 		    Map<String, PersistentClass> entityPersistntClassMapCache = new HashMap<String, PersistentClass>();
@@ -377,7 +377,8 @@ public final class SessionFactoryImpl
 		}
 		else
 		{
-		        Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
+		    entityPersisters = new HashMap<String, EntityPersister>();    
+		    Map<String,ClassMetadata> classMeta = new HashMap<String,ClassMetadata>();
 		        
 		        while (classes.hasNext()) 
 		        {
