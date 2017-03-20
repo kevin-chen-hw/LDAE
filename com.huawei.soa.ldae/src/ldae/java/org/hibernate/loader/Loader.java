@@ -91,6 +91,8 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.transform.CacheableResultTransformer;
 import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.AssociationType;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.CustomCollectionType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
@@ -871,6 +873,10 @@ public abstract class Loader {
 						null; //if null, owner will be retrieved from session
 
 				final CollectionPersister collectionPersister = collectionPersisters[i];
+				/*if("voMultiLanguage".equals(collectionPersister.getNodeName()))
+				{
+				    continue;
+				}*/
 				final Serializable key;
 				if ( owner == null ) {
 					key = null;
@@ -880,15 +886,18 @@ public abstract class Loader {
 					//TODO: old version did not require hashmap lookup:
 					//keys[collectionOwner].getIdentifier()
 				}
-
-				readCollectionElement(
-						owner,
-						key,
-						collectionPersister,
-						descriptors[i],
-						resultSet,
-						session
-					);
+				CollectionType collectionType =collectionPersister.getCollectionType();
+				if(!(collectionType instanceof CustomCollectionType && "com.huawei.soa.daf.impl.service.type.MultiLangCollectionType"
+				        .equals(((CustomCollectionType)collectionType).getUserType().getClass().getName()))){
+			    readCollectionElement(
+	                        owner,
+	                        key,
+	                        collectionPersister,
+	                        descriptors[i],
+	                        resultSet,
+	                        session
+	                    );
+				}
 
 			}
 
