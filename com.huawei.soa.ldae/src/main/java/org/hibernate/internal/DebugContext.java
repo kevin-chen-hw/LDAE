@@ -54,7 +54,7 @@ public class DebugContext
         return entityPersistentClassMapCache;
     }
 
-    public void setEntityPersistentClassMapCache(Map<String, PersistentClass> entityPersistnedetClassMapCache)
+    public void setEntityPersistentClassMapCache(Map<String, PersistentClass> entityPersistentClassMapCache)
     {
         this.entityPersistentClassMapCache = entityPersistentClassMapCache;
     }
