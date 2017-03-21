@@ -54,9 +54,9 @@ public class DebugContext
         return entityPersistentClassMapCache;
     }
 
-    public void setEntityPersistentClassMapCache(Map<String, PersistentClass> entityPersistntClassMapCache)
+    public void setEntityPersistentClassMapCache(Map<String, PersistentClass> entityPersistnedetClassMapCache)
     {
-        this.entityPersistentClassMapCache = entityPersistntClassMapCache;
+        this.entityPersistentClassMapCache = entityPersistentClassMapCache;
     }
 
     public Map<String, org.hibernate.mapping.FetchProfile> getCfgFetchProfilesCache()

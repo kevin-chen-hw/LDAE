@@ -365,14 +365,14 @@ public final class SessionFactoryImpl
 		    entityPersisters = new ConcurrentHashMap<String, EntityPersister>();
 		    debugContext.setEntityAccessStrategies(entityAccessStrategies);
 		    
-		    Map<String, PersistentClass> entityPersistntClassMapCache = new HashMap<String, PersistentClass>();
+		    Map<String, PersistentClass> entityPersistentClassMapCache = new HashMap<String, PersistentClass>();
 		    
 		    while(classes.hasNext())
 		    {
 		        final PersistentClass model = (PersistentClass) classes.next();
-		        entityPersistntClassMapCache.put(model.getEntityName(), model);
+		        entityPersistentClassMapCache.put(model.getEntityName(), model);
 		    }
-		    debugContext.setEntityPersistentClassMapCache(entityPersistntClassMapCache);
+		    debugContext.setEntityPersistentClassMapCache(entityPersistentClassMapCache);
 		    this.classMetadata = new HashMap<String, ClassMetadata>();
 		}
 		else
