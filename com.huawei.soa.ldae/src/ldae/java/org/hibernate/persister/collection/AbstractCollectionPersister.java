@@ -1298,7 +1298,7 @@ public abstract class AbstractCollectionPersister
 					int i = 0;
 					int count = 0;
 					
-					boolean needPartition = elementType.isEntityType();
+					boolean needPartition = (null != PartitionIntegrationFactory.getInstance()) && elementType.isEntityType();
 					String partitionCondition = null;
 					Type partitionType = null;
 					PartitionInfo partitionInfo = null;

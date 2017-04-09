@@ -30,7 +30,6 @@ import org.hibernate.Interceptor;
 import org.hibernate.ObjectNotFoundException;
 import org.hibernate.SessionFactory;
 import org.hibernate.boot.registry.StandardServiceRegistry;
-import org.hibernate.internal.SessionFactoryImpl;
 import org.hibernate.metamodel.SessionFactoryBuilder;
 import org.hibernate.metamodel.source.MetadataImplementor;
 import org.hibernate.proxy.EntityNotFoundDelegate;
@@ -63,7 +62,7 @@ public class SessionFactoryBuilderImpl implements SessionFactoryBuilder {
 
 	@Override
 	public SessionFactory build() {
-		return new SessionFactoryImpl(metadata, options, null );
+		throw new UnsupportedOperationException();
 	}
 
 	private static class SessionFactoryOptionsImpl implements SessionFactory.SessionFactoryOptions {
