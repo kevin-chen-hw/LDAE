@@ -26,36 +26,37 @@ package org.hibernate.type;
 import java.io.Serializable;
 import java.util.Comparator;
 
+import org.hibernate.HibernateException;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.type.descriptor.java.ShortTypeDescriptor;
-import org.hibernate.type.descriptor.sql.SmallIntTypeDescriptor;
+import org.hibernate.type.descriptor.java.ByteTypeDescriptor;
+import org.hibernate.type.descriptor.sql.TinyIntTypeDescriptor;
 
 /**
- * A type that maps between {@link java.sql.Types#SMALLINT SMALLINT} and {@link Short}
+ * A type that maps between {@link java.sql.Types#TINYINT TINYINT} and {@link Byte}
  *
  * @author Gavin King
  * @author Steve Ebersole
  */
-public class ShortType
-		extends AbstractSingleColumnStandardBasicType<Short>
-		implements PrimitiveType<Short>, DiscriminatorType<Short>, VersionType<Short> {
+public class ByteType
+		extends AbstractSingleColumnStandardBasicType<Byte>
+		implements PrimitiveType<Byte>, DiscriminatorType<Byte>, VersionType<Byte> {
 
-	public static final ShortType INSTANCE = new ShortType();
+	public static final ByteType INSTANCE = new ByteType();
 
-	private static final Short ZERO = (short) 0;
+	private static final Byte ZERO = (byte) 0;
 
-	public ShortType() {
-		super( SmallIntTypeDescriptor.INSTANCE, ShortTypeDescriptor.INSTANCE );
+	public ByteType() {
+		super( TinyIntTypeDescriptor.INSTANCE, ByteTypeDescriptor.INSTANCE );
 	}
 	@Override
 	public String getName() {
-		return "short";
+		return "byte";
 	}
 
 	@Override
 	public String[] getRegistrationKeys() {
-		return new String[] { getName(), short.class.getName(), Short.class.getName() };
+		return new String[] { getName(), byte.class.getName(), Byte.class.getName() };
 	}
 	@Override
 	public Serializable getDefaultValue() {
@@ -63,27 +64,34 @@ public class ShortType
 	}
 	@Override
 	public Class getPrimitiveClass() {
-		return short.class;
+		return byte.class;
 	}
 	@Override
-	public String objectToSQLString(Short value, Dialect dialect) throws Exception {
-		return value.toString();
+	public String objectToSQLString(Byte value, Dialect dialect) {
+		return toString( value );
 	}
 	@Override
-	public Short stringToObject(String xml) throws Exception {
-		return Short.valueOf( xml );
+	public Byte stringToObject(String xml) {
+		return fromString( xml );
 	}
 	@Override
-	public Short next(Short current, SessionImplementor session) {
-		return (short) ( current + 1 );
+	public Byte fromStringValue(String xml) {
+		return fromString( xml );
 	}
 	@Override
-	public Short seed(SessionImplementor session) {
+	public Byte next(Byte current, SessionImplementor session) {
+		if(current == null)
+		{
+			throw new HibernateException("Optimistic-lock Version can not be null.");
+		}
+		return (byte) ( current + 1 );
+	}
+	@Override
+	public Byte seed(SessionImplementor session) {
 		return ZERO;
 	}
 	@Override
-	public Comparator<Short> getComparator() {
+	public Comparator<Byte> getComparator() {
 		return getJavaTypeDescriptor().getComparator();
 	}
-
 }

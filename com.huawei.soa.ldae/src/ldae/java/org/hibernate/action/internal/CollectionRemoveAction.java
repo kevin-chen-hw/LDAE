@@ -24,7 +24,6 @@
 package org.hibernate.action.internal;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.Map;
 
 import org.hibernate.AssertionFailure;
@@ -127,29 +126,34 @@ public final class CollectionRemoveAction extends CollectionAction
             // is replaced by null or a different collection
             // (if the collection is uninitialized, hibernate has no way of
             // knowing if the collection is actually empty without querying the db)
-            PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-                    getPersister().getOwnerEntityPersister().getEntityName());
-
+			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+							getPersister().getOwnerEntityPersister()
+									.getEntityName());
             try
             {
-				if (partitionInfo != null && partitionInfo.isPartition() && getCollection().getOwner() != null)
+				if (partitionInfo != null && partitionInfo.isPartition())
                 {
-                    BigDecimal partitionValue = null;
-                    if(getCollection() != null)
+                    Map entity = null;
+                    if (getCollection() != null)
                     {
-                    	partitionValue = (BigDecimal) ((Map) getCollection().getOwner()).get(partitionInfo.getFieldName());
+                    	entity = (Map)getCollection().getOwner();
                     }
-                    else if(this.affectedOwner != null)
+                    else if (this.affectedOwner != null)
                     {
-                    	partitionValue = (BigDecimal) ((Map) this.affectedOwner).get(partitionInfo.getFieldName());
+                    	entity = (Map) this.affectedOwner;
                     }
-					PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValue);
+                    Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+    				for(int i = 0; i < partitionInfo.getFieldName().length; i++)
+    				{
+    					partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+    				}
+    				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                 }
                 getPersister().remove(getKey(), getSession());
             }
             finally
             {
-                PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+            	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
             }
         }
 

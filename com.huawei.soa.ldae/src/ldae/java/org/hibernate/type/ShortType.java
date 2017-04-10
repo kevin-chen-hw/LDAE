@@ -26,71 +26,69 @@ package org.hibernate.type;
 import java.io.Serializable;
 import java.util.Comparator;
 
+import org.hibernate.HibernateException;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionImplementor;
-import org.hibernate.type.descriptor.java.LongTypeDescriptor;
-import org.hibernate.type.descriptor.sql.BigIntTypeDescriptor;
+import org.hibernate.type.descriptor.java.ShortTypeDescriptor;
+import org.hibernate.type.descriptor.sql.SmallIntTypeDescriptor;
 
 /**
- * A type that maps between {@link java.sql.Types#BIGINT BIGINT} and {@link Long}
+ * A type that maps between {@link java.sql.Types#SMALLINT SMALLINT} and {@link Short}
  *
  * @author Gavin King
  * @author Steve Ebersole
  */
-public class LongType
-		extends AbstractSingleColumnStandardBasicType<Long>
-		implements PrimitiveType<Long>, DiscriminatorType<Long>, VersionType<Long> {
+public class ShortType
+		extends AbstractSingleColumnStandardBasicType<Short>
+		implements PrimitiveType<Short>, DiscriminatorType<Short>, VersionType<Short> {
 
-	public static final LongType INSTANCE = new LongType();
+	public static final ShortType INSTANCE = new ShortType();
 
-	private static final Long ZERO = (long) 0;
+	private static final Short ZERO = (short) 0;
 
-	public LongType() {
-		super( BigIntTypeDescriptor.INSTANCE, LongTypeDescriptor.INSTANCE );
+	public ShortType() {
+		super( SmallIntTypeDescriptor.INSTANCE, ShortTypeDescriptor.INSTANCE );
 	}
-
 	@Override
 	public String getName() {
-		return "long";
+		return "short";
 	}
 
 	@Override
 	public String[] getRegistrationKeys() {
-		return new String[] { getName(), long.class.getName(), Long.class.getName() };
+		return new String[] { getName(), short.class.getName(), Short.class.getName() };
 	}
-
 	@Override
 	public Serializable getDefaultValue() {
 		return ZERO;
 	}
-
 	@Override
 	public Class getPrimitiveClass() {
-		return long.class;
+		return short.class;
 	}
-
 	@Override
-	public Long stringToObject(String xml) throws Exception {
-		return Long.valueOf( xml );
+	public String objectToSQLString(Short value, Dialect dialect) throws Exception {
+		return value.toString();
 	}
-
 	@Override
-	public Long next(Long current, SessionImplementor session) {
-		return current + 1L;
+	public Short stringToObject(String xml) throws Exception {
+		return Short.valueOf( xml );
 	}
-
 	@Override
-	public Long seed(SessionImplementor session) {
+	public Short next(Short current, SessionImplementor session) {
+		if(current == null)
+		{
+			throw new HibernateException("Optimistic-lock Version can not be null.");
+		}
+		return (short) ( current + 1 );
+	}
+	@Override
+	public Short seed(SessionImplementor session) {
 		return ZERO;
 	}
-
 	@Override
-	public Comparator<Long> getComparator() {
+	public Comparator<Short> getComparator() {
 		return getJavaTypeDescriptor().getComparator();
 	}
 
-	@Override
-	public String objectToSQLString(Long value, Dialect dialect) throws Exception {
-		return value.toString();
-	}
 }

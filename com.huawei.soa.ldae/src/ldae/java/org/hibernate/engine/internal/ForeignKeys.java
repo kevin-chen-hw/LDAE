@@ -24,7 +24,6 @@
 package org.hibernate.engine.internal;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.Map;
 
 import org.hibernate.EntityMode;
@@ -265,8 +264,12 @@ public final class ForeignKeys {
 		{
 			if (partitionInfo != null && partitionInfo.isPartition() && entity != null)
 			{
-				PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-						(BigDecimal) ((Map) entity).get(partitionInfo.getFieldName()));
+                Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                {
+                    partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                }
+                PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
 			}
 			final Object[] snapshot = session.getPersistenceContext().getDatabaseSnapshot(
 					persister.getIdentifier(entity, session), persister);

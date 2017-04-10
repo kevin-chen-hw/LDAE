@@ -24,7 +24,6 @@
 package org.hibernate.action.internal;
 
 import java.io.Serializable;
-import java.math.BigDecimal;
 import java.util.Map;
 
 import org.hibernate.AssertionFailure;
@@ -94,8 +93,17 @@ public final class CollectionUpdateAction extends CollectionAction {
                 {
                     if (partitionInfo != null && partitionInfo.isPartition())
                     {
-                        PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-                                (BigDecimal) ((Map) collection.getOwner()).get(partitionInfo.getFieldName()));
+                        Map entity = null;
+                        if (getCollection() != null)
+                        {
+                            entity = (Map) getCollection().getOwner();
+                        }
+                        Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                        for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                        {
+                            partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                        }
+                        PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                     }
                     persister.remove(id, session);
                 }
@@ -120,8 +128,17 @@ public final class CollectionUpdateAction extends CollectionAction {
                 {
                     if (partitionInfo != null && partitionInfo.isPartition())
                     {
-                        PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(
-                                (BigDecimal) ((Map) collection.getOwner()).get(partitionInfo.getFieldName()));
+                        Map entity = null;
+                        if (getCollection() != null)
+                        {
+                            entity = (Map) getCollection().getOwner();
+                        }
+                        Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                        for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                        {
+                            partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                        }
+                        PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
                     }
                     persister.remove(id, session);
                 }
@@ -133,9 +150,32 @@ public final class CollectionUpdateAction extends CollectionAction {
 			persister.recreate( collection, id, session );
 		}
 		else {
+            PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                    getPersister().getOwnerEntityPersister().getEntityName());
+            try
+            {
+                if (partitionInfo != null && partitionInfo.isPartition())
+                {
+                    Map entity = null;
+                    if (getCollection() != null)
+                    {
+                        entity = (Map) getCollection().getOwner();
+                    }
+                    Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                    for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                    {
+                        partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                    }
+                    PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+                }
 			persister.deleteRows( collection, id, session );
 			persister.updateRows( collection, id, session );
 			persister.insertRows( collection, id, session );
+            }
+            finally
+            {
+                PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+            }
 		}
 
 		getSession().getPersistenceContext().getCollectionEntry( collection ).afterAction( collection );

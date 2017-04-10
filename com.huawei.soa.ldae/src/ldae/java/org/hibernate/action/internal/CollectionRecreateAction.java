@@ -24,6 +24,7 @@
 package org.hibernate.action.internal;
 
 import java.io.Serializable;
+import java.util.Map;
 
 import org.hibernate.HibernateException;
 import org.hibernate.collection.spi.PersistentCollection;
@@ -35,6 +36,9 @@ import org.hibernate.event.spi.PostCollectionRecreateEventListener;
 import org.hibernate.event.spi.PreCollectionRecreateEvent;
 import org.hibernate.event.spi.PreCollectionRecreateEventListener;
 import org.hibernate.persister.collection.CollectionPersister;
+
+import com.huawei.soa.ldae.partition.PartitionInfo;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * The action for recreating a collection
@@ -64,7 +68,33 @@ public final class CollectionRecreateAction extends CollectionAction {
 		final PersistentCollection collection = getCollection();
 		
 		preRecreate();
-		getPersister().recreate( collection, getKey(), getSession() );
+
+        PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                getPersister().getOwnerEntityPersister().getEntityName());
+
+        try
+        {
+            if (partitionInfo != null && partitionInfo.isPartition())
+            {
+                Map entity = null;
+                if (getCollection() != null)
+                {
+                    entity = (Map) getCollection().getOwner();
+                }
+                Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                {
+                    partitionValues[i] = ((Map) entity).get(partitionInfo.getFieldName()[i]);
+                }
+                PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+            }
+            getPersister().recreate(collection, getKey(), getSession());
+        }
+        finally
+        {
+            PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+        }
+
 		getSession().getPersistenceContext().getCollectionEntry( collection ).afterAction( collection );
 		evict();
 		postRecreate();

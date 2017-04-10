@@ -54,10 +54,11 @@ import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.loader.plan.exec.query.spi.NamedParameterContext;
 import org.hibernate.loader.plan.exec.spi.LoadQueryDetails;
 import org.hibernate.loader.spi.AfterLoadAction;
+import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.transform.ResultTransformer;
-import org.hibernate.type.BigDecimalType;
 import org.hibernate.type.Type;
 
+import com.huawei.soa.ldae.partition.PartitionInfo;
 import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
@@ -246,19 +247,39 @@ public abstract class AbstractLoadPlanBasedLoader
 
         Object[] values = queryParameters.getFilteredPositionalParameterValues();
         Type[] types = queryParameters.getFilteredPositionalParameterTypes();
-        if (null != PartitionIntegrationFactory.getInstance().getCurrentPartitionValue())
+        Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
+        if (null != currentPartitionValue)
         {
-            Object[] newValues = Arrays.copyOf(values, values.length + 1);
-            newValues[values.length] = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-            Type[] newTypes = Arrays.copyOf(types, types.length + 1);
-            newTypes[types.length] = new BigDecimalType();
-            queryParameters.setFilteredPositionalParameterValues(newValues);
-            queryParameters.setFilteredPositionalParameterTypes(newTypes);
             String entityName = queryParameters.getOptionalEntityName();
-            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName();
-            String tableAlias = ((AbstractLoadQueryDetails) this.getStaticLoadQuery()).getRootTableAlias();
-            sql = new StringBuilder(sql).append(" AND ").append(tableAlias).append(".").append(columnName)
-                    .append("=?").toString();
+            PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName);
+            
+            if(partitionInfo != null && partitionInfo.isPartition())
+            {
+            	String tableAlias = ((AbstractLoadQueryDetails) this.getStaticLoadQuery()).getRootTableAlias();
+            	EntityPersister entityPersister = getFactory().getEntityPersister(entityName);
+            	
+            	StringBuilder sqlSB = new StringBuilder(sql);
+            	String[] fieldNames = partitionInfo.getFieldName();
+            	
+            	int fieldSizeToAppend = currentPartitionValue.length < fieldNames.length ? currentPartitionValue.length
+            			: fieldNames.length;
+            	
+            	Object[] newValues = Arrays.copyOf(values, values.length + fieldSizeToAppend);
+            	Type[] newTypes = Arrays.copyOf(types, types.length + fieldSizeToAppend);
+            	
+            	for(int i = 0; i < fieldSizeToAppend; i++)
+            	{
+            		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getColumnName()[i])
+            		.append("=?");
+            		newValues[values.length + i] = currentPartitionValue[i];
+            		newTypes[types.length] = entityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
+            	}
+            	
+            	sql = sqlSB.toString();
+            	queryParameters.setFilteredPositionalParameterValues(newValues);
+            	queryParameters.setFilteredPositionalParameterTypes(newTypes);
+            }
+            
         }
 
         final PreparedStatement st = session.getTransactionCoordinator().getJdbcCoordinator().getStatementPreparer()

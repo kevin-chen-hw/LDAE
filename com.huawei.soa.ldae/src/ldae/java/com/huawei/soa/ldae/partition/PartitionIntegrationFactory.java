@@ -1,7 +1,6 @@
 package com.huawei.soa.ldae.partition;
 
 import java.lang.reflect.Method;
-import java.math.BigDecimal;
 import java.util.Map;
 
 public class PartitionIntegrationFactory
@@ -16,7 +15,7 @@ public class PartitionIntegrationFactory
 
     private Object partitionInfoResolver = null;
 
-    private ThreadLocal<BigDecimal> threadLacal = new ThreadLocal<BigDecimal>();
+    private ThreadLocal<Object[]> threadLacal = new ThreadLocal<Object[]>();
 
     public static PartitionIntegrationFactory getInstance()
     {
@@ -64,12 +63,12 @@ public class PartitionIntegrationFactory
         }
     }
 
-    public BigDecimal getCurrentPartitionValue()
+    public Object[] getCurrentPartitionValue()
     {
         return threadLacal.get();
     }
 
-    public void setCurrentPartitionValue(BigDecimal value)
+    public void setCurrentPartitionValue(Object[] value)
     {
         threadLacal.set(value);
     }

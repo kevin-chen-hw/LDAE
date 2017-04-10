@@ -26,6 +26,7 @@ package org.hibernate.type;
 import java.io.Serializable;
 import java.util.Comparator;
 
+import org.hibernate.HibernateException;
 import org.hibernate.dialect.Dialect;
 import org.hibernate.engine.spi.SessionImplementor;
 import org.hibernate.type.descriptor.java.IntegerTypeDescriptor;
@@ -77,6 +78,10 @@ public class IntegerType extends AbstractSingleColumnStandardBasicType<Integer>
 	}
 	@Override
 	public Integer next(Integer current, SessionImplementor session) {
+		if(current == null)
+		{
+			throw new HibernateException("Optimistic-lock Version can not be null.");
+		}
 		return current+1;
 	}
 	@Override

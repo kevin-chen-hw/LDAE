@@ -91,12 +91,14 @@ import org.hibernate.proxy.HibernateProxy;
 import org.hibernate.transform.CacheableResultTransformer;
 import org.hibernate.transform.ResultTransformer;
 import org.hibernate.type.AssociationType;
-import org.hibernate.type.BigDecimalType;
+import org.hibernate.type.CollectionType;
+import org.hibernate.type.CustomCollectionType;
 import org.hibernate.type.EntityType;
 import org.hibernate.type.Type;
 import org.hibernate.type.VersionType;
 import org.jboss.logging.Logger;
 
+import com.huawei.soa.ldae.partition.PartitionInfo;
 import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
@@ -871,6 +873,10 @@ public abstract class Loader {
 						null; //if null, owner will be retrieved from session
 
 				final CollectionPersister collectionPersister = collectionPersisters[i];
+				/*if("voMultiLanguage".equals(collectionPersister.getNodeName()))
+				{
+				    continue;
+				}*/
 				final Serializable key;
 				if ( owner == null ) {
 					key = null;
@@ -880,15 +886,18 @@ public abstract class Loader {
 					//TODO: old version did not require hashmap lookup:
 					//keys[collectionOwner].getIdentifier()
 				}
-
-				readCollectionElement(
-						owner,
-						key,
-						collectionPersister,
-						descriptors[i],
-						resultSet,
-						session
-					);
+				CollectionType collectionType =collectionPersister.getCollectionType();
+				if(!(collectionType instanceof CustomCollectionType && "com.huawei.soa.daf.impl.service.type.MultiLangCollectionType"
+				        .equals(((CustomCollectionType)collectionType).getUserType().getClass().getName()))){
+			    readCollectionElement(
+	                        owner,
+	                        key,
+	                        collectionPersister,
+	                        descriptors[i],
+	                        resultSet,
+	                        session
+	                    );
+				}
 
 			}
 
@@ -1912,24 +1921,40 @@ public abstract class Loader {
 		Object[] values = queryParameters.getFilteredPositionalParameterValues();
 		Type[] types = queryParameters.getFilteredPositionalParameterTypes();
 		
-		if (null != PartitionIntegrationFactory.getInstance().getCurrentPartitionValue())
-		{
-			Object[] newValues = Arrays.copyOf(values, values.length + 1);
-			newValues[values.length] = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-			Type[] newTypes = Arrays.copyOf(types, types.length + 1);
-			newTypes[types.length] = new BigDecimalType();
-			queryParameters.setFilteredPositionalParameterValues(newValues);
-			queryParameters.setFilteredPositionalParameterTypes(newTypes);
-			
-			String entityName = queryParameters.getOptionalEntityName();
-            String columnName = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName).getColumnName();
-            
-            String tableAlias = this.getAliases()[0];
-            sql = new StringBuilder(sql).append(" AND ").append(tableAlias).append(".").append(columnName)
-                    .append("=?").toString();
-		}
-
-		
+	Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
+    if (null != currentPartitionValue)
+    {
+        String entityName = queryParameters.getOptionalEntityName();
+        PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName);
+        
+        if(partitionInfo != null && partitionInfo.isPartition())
+        {
+        	String tableAlias = this.getAliases()[0];
+        	EntityPersister entityPersister = getFactory().getEntityPersister(entityName);
+        	
+        	StringBuilder sqlSB = new StringBuilder(sql);
+        	String[] fieldNames = partitionInfo.getFieldName();
+        	
+        	int fieldSizeToAppend = currentPartitionValue.length < fieldNames.length ? currentPartitionValue.length
+        			: fieldNames.length;
+        	
+        	Object[] newValues = Arrays.copyOf(values, values.length + fieldSizeToAppend);
+        	Type[] newTypes = Arrays.copyOf(types, types.length + fieldSizeToAppend);
+        	
+        	for(int i = 0; i < fieldSizeToAppend; i++)
+        	{
+        		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getColumnName()[i])
+        		.append("=?");
+        		newValues[values.length + i] = currentPartitionValue[i];
+        		newTypes[types.length] = entityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
+        	}
+        	
+        	sql = sqlSB.toString();
+        	queryParameters.setFilteredPositionalParameterValues(newValues);
+        	queryParameters.setFilteredPositionalParameterTypes(newTypes);
+        }
+    }
+    
 		PreparedStatement st = session.getTransactionCoordinator().getJdbcCoordinator().getStatementPreparer().prepareQueryStatement(
 				sql,
 				callable,
