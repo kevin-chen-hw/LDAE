@@ -23,19 +23,23 @@ public class DebugUtils
     
     private static final String VM_ARGUMENT_DEBUG_ON = "on";
     
-    private static final CoreMessageLogger LOG = Logger.getMessageLogger(CoreMessageLogger.class,
-            DebugUtils.class.getName());
+    public static boolean isDebug;
+    
+    static
+    {
+    	String mode = System.getProperty(VM_ARGUMENT_DEBUG);
+    	if(VM_ARGUMENT_DEBUG_ON.equalsIgnoreCase(mode))
+        {
+    		isDebug = true;
+        }
+    	else
+    	{
+    		isDebug = false;
+    	}
+    }
     
     public static boolean isDebug()
     {
-        String mode = System.getProperty(VM_ARGUMENT_DEBUG);
-        if(VM_ARGUMENT_DEBUG_ON.equalsIgnoreCase(mode))
-        {
-            LOG.debug("Now app runtime env is debug.");
-            return true;
-        }
-        
-        LOG.debug("Now app runtime env is release.");
-        return false;
+    	return isDebug;
     }
 }
