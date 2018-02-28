@@ -2556,11 +2556,11 @@ public class Configuration implements Serializable {
 		filterDefinitions.put( definition.getFilterName(), definition );
 	}
 
-	public Map<String, org.hibernate.mapping.FetchProfile> getFetchProfiles()
-	{
-	    return fetchProfiles;
-	}
-	
+    public Map<String, org.hibernate.mapping.FetchProfile> getFetchProfiles()
+    {
+        return fetchProfiles;
+    }
+
 	public Iterator iterateFetchProfiles() {
 		return fetchProfiles.values().iterator();
 	}

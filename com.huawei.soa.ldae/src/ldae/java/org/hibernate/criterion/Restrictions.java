@@ -391,9 +391,9 @@ public class Restrictions {
 		return new PropertyExpression( propertyName, otherPropertyName, ">=" );
 	}
 	
-	public static MultiLangPropertyExpression eqMultiLangProperty(String propertyName, String otherPropertyName){
-	    return new MultiLangPropertyExpression(propertyName, otherPropertyName, "=");
-	}
+	public static MultiLangPropertyExpression eqMultiLangProperty(String propertyName, String otherPropertyName) {
+        return new MultiLangPropertyExpression( propertyName, otherPropertyName, "=" );
+    }
 
 	/**
 	 * Return the conjuction of two expressions

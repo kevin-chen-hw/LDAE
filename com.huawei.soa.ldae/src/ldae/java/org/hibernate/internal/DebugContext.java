@@ -1,5 +1,5 @@
 /*
- * Copyright © Huawei Technologies Co., Ltd. 1998-2007. All rights reserved.
+ * Copyright © Huawei Technologies Co., Ltd. 1998-2017. All rights reserved. 
  */
 package org.hibernate.internal;
 
@@ -11,7 +11,7 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.persister.spi.PersisterFactory;
 
 /**
- * TODO添加类的一句话描述。
+ * TODO 添加类的一句话简单描述。
  * <p>
  * TODO 详细描述
  * <p>
@@ -19,24 +19,24 @@ import org.hibernate.persister.spi.PersisterFactory;
  * 
  * @author j00318686
  * @see
- *@since ONIP SOABean V300R003C00
+ * @since ONIP SOABean V300R003C00
  */
 public class DebugContext
 {
     private Mapping mappingCache;
-    
+
     private Map<String, PersistentClass> entityPersistentClassMapCache;
-    
+
     private Map<String, org.hibernate.mapping.FetchProfile> cfgFetchProfilesCache;
-    
+
     private String cacheRegionPrefix;
-    
+
     private Map entityAccessStrategies;
-    
+
     private RegionFactory regionFactory;
-    
+
     private PersisterFactory persisterFactory;
-    
+
     private final Object mutexCreateEntityPersisterLock = new Object();
 
     public Mapping getMappingCache()
