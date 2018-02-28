@@ -80,10 +80,10 @@ public class ByteType
 	}
 	@Override
 	public Byte next(Byte current, SessionImplementor session) {
-		if(current == null)
-		{
-			throw new HibernateException("Optimistic-lock Version can not be null.");
-		}
+        if (current == null)
+        {
+            throw new HibernateException("Optimistic-lock Version can not be null.");
+        }
 		return (byte) ( current + 1 );
 	}
 	@Override

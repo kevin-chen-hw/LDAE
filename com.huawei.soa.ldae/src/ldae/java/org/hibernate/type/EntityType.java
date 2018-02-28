@@ -550,20 +550,20 @@ public abstract class EntityType extends AbstractType implements AssociationType
         {
             return null;
         }
-        
+
         PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo((Map)owner);
         if (partitionInfo.isPartition())
         {
             try
             {
-            	Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
-            	for(int i = 0; i< partitionInfo.getFieldName().length; i++)
-            	{
-            		partitionValues[i] = ((Map) owner).get(partitionInfo.getFieldName()[i]);
-            	}
-            	PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
-                
-            	if (isReferenceToPrimaryKey())
+                Object[] partitionValues = new Object[partitionInfo.getFieldName().length];
+                for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                {
+                    partitionValues[i] = ((Map) owner).get(partitionInfo.getFieldName()[i]);
+                }
+                PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
+
+                if (isReferenceToPrimaryKey())
                 {
                     return resolveIdentifier((Serializable) value, session);
                 }
@@ -575,7 +575,7 @@ public abstract class EntityType extends AbstractType implements AssociationType
             }
             finally
             {
-            	PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
+                PartitionIntegrationFactory.getInstance().removeCurrentPartitionValue();
             }
         }
         else

@@ -24,7 +24,10 @@
 package org.hibernate.event.internal;
 
 import java.io.Serializable;
+import java.util.Map;
 
+import com.huawei.soa.ldae.partition.HintPartitionParameters;
+import com.huawei.soa.ldae.partition.HintPartitionUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.cache.spi.CacheKey;
 import org.hibernate.cache.spi.entry.CollectionCacheEntry;
@@ -40,6 +43,7 @@ import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.persister.collection.CollectionPersister;
 import org.hibernate.pretty.MessageHelper;
+import org.hibernate.type.MapType;
 
 /**
  * @author Gavin King
@@ -89,16 +93,49 @@ public class DefaultInitializeCollectionEventListener implements InitializeColle
 				if ( traceEnabled ) {
 					LOG.trace( "Collection not cached" );
 				}
-				ce.getLoadedPersister().initialize( ce.getLoadedKey(), source );
-				if ( traceEnabled ) {
-					LOG.trace( "Collection initialized" );
+
+				//get router parameters from owner
+				Map owner = (Map) collection.getOwner();
+				Object routerValue = owner.get(HintPartitionUtils.HINT_COLUMN_NAME);
+				boolean hasRouterPrams = false;
+				if (null != routerValue)
+				{
+					Map<String, Object> value = (Map<String, Object>)routerValue;
+					if (value.size() > 0)
+					{
+						hasRouterPrams = true;
+						HintPartitionParameters.set(value);
+
+						if(!(ce.getLoadedPersister().getCollectionType() instanceof MapType))
+						{
+							//修改为子entity的name
+							HintPartitionParameters.getCurrent().put(HintPartitionParameters.HINT_ENTITY_NAME,
+									ce.getLoadedPersister().getElementType().getName());
+						}
+					}
 				}
 
-				if ( source.getFactory().getStatistics().isStatisticsEnabled() ) {
-					source.getFactory().getStatisticsImplementor().fetchCollection(
-							ce.getLoadedPersister().getRole()
-					);
+				try
+				{
+					ce.getLoadedPersister().initialize( ce.getLoadedKey(), source );
+					if ( traceEnabled ) {
+						LOG.trace( "Collection initialized" );
+					}
+
+					if ( source.getFactory().getStatistics().isStatisticsEnabled() ) {
+						source.getFactory().getStatisticsImplementor().fetchCollection(
+								ce.getLoadedPersister().getRole()
+						);
+					}
 				}
+				finally
+				{
+					if (hasRouterPrams)
+					{
+						HintPartitionParameters.destroy();
+					}
+				}
+
 			}
 		}
 	}

@@ -35,6 +35,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
+import com.huawei.soa.ldae.partition.HintPartitionParameters;
+import com.huawei.soa.ldae.partition.HintPartitionUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.LockOptions;
 import org.hibernate.ScrollMode;
@@ -131,7 +133,7 @@ public abstract class AbstractLoadPlanBasedLoader
         try
         {
             List results = null;
-            final String sql = loadQueryDetails.getSqlStatement();
+            String sql = loadQueryDetails.getSqlStatement();
             SqlStatementWrapper wrapper = null;
             try
             {
@@ -187,6 +189,17 @@ public abstract class AbstractLoadPlanBasedLoader
 
         // Adding locks and comments.
         sql = preprocessSQL(sql, queryParameters, getFactory().getDialect(), afterLoadActions);
+
+        // add router hints
+        Map<String, Object> hintsParams = HintPartitionParameters.getCurrent();
+        if (null != hintsParams && hintsParams.size() > 0)
+        {
+            if (null != queryParameters.getOptionalEntityName())
+            {
+                hintsParams.put(HintPartitionParameters.HINT_ENTITY_NAME, queryParameters.getOptionalEntityName());
+            }
+            sql = HintPartitionUtils.getSelectClauseWithRouterHints(sql, hintsParams);
+        }
 
         final PreparedStatement st = prepareQueryStatement(sql, queryParameters, limitHandler, scroll, session);
         return new SqlStatementWrapper(st, getResultSet(st, queryParameters.getRowSelection(), limitHandler,
@@ -252,34 +265,34 @@ public abstract class AbstractLoadPlanBasedLoader
         {
             String entityName = queryParameters.getOptionalEntityName();
             PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(entityName);
-            
-            if(partitionInfo != null && partitionInfo.isPartition())
+
+            if (partitionInfo != null && partitionInfo.isPartition())
             {
-            	String tableAlias = ((AbstractLoadQueryDetails) this.getStaticLoadQuery()).getRootTableAlias();
-            	EntityPersister entityPersister = getFactory().getEntityPersister(entityName);
-            	
-            	StringBuilder sqlSB = new StringBuilder(sql);
-            	String[] fieldNames = partitionInfo.getFieldName();
-            	
-            	int fieldSizeToAppend = currentPartitionValue.length < fieldNames.length ? currentPartitionValue.length
-            			: fieldNames.length;
-            	
-            	Object[] newValues = Arrays.copyOf(values, values.length + fieldSizeToAppend);
-            	Type[] newTypes = Arrays.copyOf(types, types.length + fieldSizeToAppend);
-            	
-            	for(int i = 0; i < fieldSizeToAppend; i++)
-            	{
-            		sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getColumnName()[i])
-            		.append("=?");
-            		newValues[values.length + i] = currentPartitionValue[i];
-            		newTypes[types.length] = entityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
-            	}
-            	
-            	sql = sqlSB.toString();
-            	queryParameters.setFilteredPositionalParameterValues(newValues);
-            	queryParameters.setFilteredPositionalParameterTypes(newTypes);
+                String tableAlias = ((AbstractLoadQueryDetails) this.getStaticLoadQuery()).getRootTableAlias();
+                EntityPersister entityPersister = getFactory().getEntityPersister(entityName);
+
+                StringBuilder sqlSB = new StringBuilder(sql);
+                String[] fieldNames = partitionInfo.getFieldName();
+
+                int fieldSizeToAppend = currentPartitionValue.length < fieldNames.length ? currentPartitionValue.length
+                        : fieldNames.length;
+
+                Object[] newValues = Arrays.copyOf(values, values.length + fieldSizeToAppend);
+                Type[] newTypes = Arrays.copyOf(types, types.length + fieldSizeToAppend);
+
+                for (int i = 0; i < fieldSizeToAppend; i++)
+                {
+                    sqlSB.append(" AND ").append(tableAlias).append(".").append(partitionInfo.getColumnName()[i])
+                            .append("=?");
+                    newValues[values.length + i] = currentPartitionValue[i];
+                    newTypes[types.length] = entityPersister.getPropertyType(partitionInfo.getFieldName()[i]);
+                }
+
+                sql = sqlSB.toString();
+                queryParameters.setFilteredPositionalParameterValues(newValues);
+                queryParameters.setFilteredPositionalParameterTypes(newTypes);
             }
-            
+
         }
 
         final PreparedStatement st = session.getTransactionCoordinator().getJdbcCoordinator().getStatementPreparer()
@@ -334,6 +347,13 @@ public abstract class AbstractLoadPlanBasedLoader
                         st.setInt(col++, lockOptions.getTimeOut());
                     }
                 }
+            }
+
+            //add router hints parameters
+            Map<String, Object> hintsParams = HintPartitionParameters.getCurrent();
+            if (null != hintsParams && hintsParams.size() > 0)
+            {
+                HintPartitionUtils.bindHintPartitionParam(st, hintsParams, col, session);
             }
 
             if (log.isTraceEnabled())

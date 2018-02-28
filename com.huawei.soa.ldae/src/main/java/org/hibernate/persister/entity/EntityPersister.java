@@ -776,4 +776,6 @@ public interface EntityPersister extends OptimisticCacheSource, EntityDefinition
 	public int[] resolveAttributeIndexes(Set<String> properties);
 
 	public boolean canUseReferenceCacheEntries();
+
+	public int getHintPartitionProperty();
 }

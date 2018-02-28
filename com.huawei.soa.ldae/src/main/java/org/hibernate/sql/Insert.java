@@ -40,6 +40,7 @@ public class Insert {
 	private String tableName;
 	private String comment;
 	private Map columns = new LinkedHashMap();
+	private String hint;
 
 	public Insert(Dialect dialect) {
 		this.dialect = dialect;
@@ -49,6 +50,11 @@ public class Insert {
 		return dialect;
 	}
 
+	public Insert setHit(String hint)
+	{
+		this.hint = hint;
+		return this;
+	}
 	public Insert setComment(String comment) {
 		this.comment = comment;
 		return this;
@@ -110,8 +116,13 @@ public class Insert {
 		if ( comment != null ) {
 			buf.append( "/* " ).append( comment ).append( " */ " );
 		}
-		buf.append("insert into ")
-			.append(tableName);
+		buf.append("insert ");
+		if(hint != null)
+		{
+			buf.append("/* ").append(hint).append(" */");
+		}
+
+		buf.append(" into ").append(tableName);
 		if ( columns.size()==0 ) {
 			buf.append(' ').append( dialect.getNoColumnsInsertString() );
 		}

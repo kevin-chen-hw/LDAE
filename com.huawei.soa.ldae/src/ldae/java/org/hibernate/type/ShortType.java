@@ -76,11 +76,11 @@ public class ShortType
 	}
 	@Override
 	public Short next(Short current, SessionImplementor session) {
-		if(current == null)
-		{
-			throw new HibernateException("Optimistic-lock Version can not be null.");
-		}
-		return (short) ( current + 1 );
+        if (current == null)
+        {
+            throw new HibernateException("Optimistic-lock Version can not be null.");
+        }
+        return (short) (current + 1);
 	}
 	@Override
 	public Short seed(SessionImplementor session) {
