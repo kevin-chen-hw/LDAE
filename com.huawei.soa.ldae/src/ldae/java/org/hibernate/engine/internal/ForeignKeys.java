@@ -26,6 +26,7 @@ package org.hibernate.engine.internal;
 import java.io.Serializable;
 import java.util.Map;
 
+import com.huawei.soa.ldae.partition.TransientEntityLocal;
 import org.hibernate.EntityMode;
 import org.hibernate.HibernateException;
 import org.hibernate.TransientObjectException;
@@ -271,8 +272,19 @@ public final class ForeignKeys {
                 }
                 PartitionIntegrationFactory.getInstance().setCurrentPartitionValue(partitionValues);
 			}
-			final Object[] snapshot = session.getPersistenceContext().getDatabaseSnapshot(
-					persister.getIdentifier(entity, session), persister);
+
+			final Object[] snapshot;
+			try
+			{
+				TransientEntityLocal.set(entity);
+				snapshot = session.getPersistenceContext().getDatabaseSnapshot(
+						persister.getIdentifier(entity, session), persister);
+			}
+			finally
+			{
+				TransientEntityLocal.destroy();
+			}
+
 			return snapshot == null;
 		}
 		finally

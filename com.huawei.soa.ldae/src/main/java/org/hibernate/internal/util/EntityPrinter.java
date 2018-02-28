@@ -118,7 +118,7 @@ public final class EntityPrinter {
                 LOG.debug("More......");
 				break;
 			}
-            LOG.debug( toString( entityKeyAndEntity.getKey().getEntityName(), entityKeyAndEntity.getValue() ) );
+			LOG.debug( toString( entityKeyAndEntity.getKey().getEntityName(), entityKeyAndEntity.getValue() ) );
 		}
 	}
 

@@ -28,8 +28,10 @@ import java.io.Serializable;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 
+import com.huawei.soa.ldae.partition.HintPartitionUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.cache.CacheException;
@@ -62,7 +64,7 @@ import org.hibernate.type.MapType;
 import org.hibernate.type.Type;
 
 import com.huawei.soa.ldae.partition.PartitionInfo;
-import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;;
+import com.huawei.soa.ldae.partition.PartitionIntegrationFactory;
 
 /**
  * Collection persister for collections of values and many-to-many associations.
@@ -228,44 +230,50 @@ public class BasicCollectionPersister extends AbstractCollectionPersister {
 			String sql = getSQLUpdateRowString();
 			int i = 0;
 			int count = 0;
-			
-			boolean needPartition = false;
-			EntityPersister partitionEntityPersister = null;
-			if(getElementType().isEntityType())
+
+            boolean needPartition = false;
+            EntityPersister partitionEntityPersister = null;
+            if (getElementType().isEntityType())
+            {
+                needPartition = true;
+                partitionEntityPersister = getElementPersister();
+            }
+            else if (getCollectionType() instanceof MapType)
+            {
+                needPartition = true;
+                partitionEntityPersister = getOwnerEntityPersister();
+            }
+
+            Type[] partitionType = null;
+            PartitionInfo partitionInfo = null;
+            if (needPartition)
+            {
+                partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
+                        partitionEntityPersister.getEntityName());
+                needPartition = partitionInfo != null && partitionInfo.isPartition();
+            }
+
+            if (needPartition)
+            {
+                for (String columnName : partitionInfo.getColumnName())
+                {
+                    sql += new StringBuilder(" and ").append(columnName).append(" = ?").toString();
+                }
+
+                partitionType = new Type[partitionInfo.getFieldName().length];
+
+                for (int j = 0; j < partitionInfo.getFieldName().length; j++)
+                {
+                    partitionType[j] = partitionEntityPersister.getPropertyType(partitionInfo.getFieldName()[j]);
+                }
+            }
+
+			Object ownerValue = collection.getOwner();
+			if(HintPartitionUtils.isHintPartition(getOwnerEntityPersister(), ownerValue))
 			{
-				needPartition = true;
-				partitionEntityPersister = getElementPersister();
+				sql = HintPartitionUtils.getHintSql(sql, ownerValue);
 			}
-			else if(getCollectionType() instanceof MapType)
-			{
-				needPartition = true;
-				partitionEntityPersister = getOwnerEntityPersister();
-			}
-			
-			Type[] partitionType = null;
-			PartitionInfo partitionInfo = null;
-			if(needPartition)
-			{
-				partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(
-						partitionEntityPersister.getEntityName());
-				needPartition = partitionInfo != null && partitionInfo.isPartition();
-			}
-			
-			if(needPartition)
-			{
-				for(String columnName : partitionInfo.getColumnName())
-				{
-					sql += new StringBuilder(" and ").append(columnName).append(" = ?").toString();
-				}
-				
-				partitionType = new Type[partitionInfo.getFieldName().length];
-				
-				for(int j = 0; j < partitionInfo.getFieldName().length; j++)
-				{
-					partitionType[j] = partitionEntityPersister.getPropertyType(partitionInfo.getFieldName()[j]);
-				}
-			}
-			
+
 			while ( entries.hasNext() ) {
 				Object entry = entries.next();
 				if ( collection.needsUpdating( entry, i, elementType ) ) {
@@ -299,28 +307,33 @@ public class BasicCollectionPersister extends AbstractCollectionPersister {
 						else {
 							loc = writeKey( st, id, loc, session );
 							if ( hasIndex && !indexContainsFormula ) {
-								loc = writeIndexToWhere( st, collection.getIndex( entry, i, this ), loc, session );
+                                loc = writeIndexToWhere(st, collection.getIndex(entry, i, this), loc, session);
 							}
 							else {
-								loc = writeElementToWhere( st, collection.getSnapshotElement( entry, i ), loc, session );
+                                loc = writeElementToWhere(st, collection.getSnapshotElement(entry, i), loc, session);
 							}
 						}
 
-						if(needPartition)
+                        if (needPartition)
+                        {
+                            Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance()
+                                    .getCurrentPartitionValue();
+                            if (null != currentPartitionValue)
+                            {
+                                for (int k = 0; k < partitionType.length; k++)
+                                {
+                                    partitionType[k].nullSafeSet(st, currentPartitionValue[k], loc, session);
+                                    loc++;
+                                }
+
+                            }
+                        }
+
+						if(HintPartitionUtils.isHintPartition(getOwnerEntityPersister(), ownerValue))
 						{
-							Object[] currentPartitionValue = PartitionIntegrationFactory.getInstance()
-									.getCurrentPartitionValue();
-							if(null != currentPartitionValue)
-							{
-								for(int k = 0; k < partitionType.length; k++)
-								{
-									partitionType[k].nullSafeSet(st, currentPartitionValue[k], loc, session);
-									loc++;
-								}
-								
-								
-							}
+							loc = HintPartitionUtils.bindHintPartitionParam(st, ((Map) ownerValue).get(HintPartitionUtils.HINT_COLUMN_NAME), loc, session);
 						}
+
 						if ( useBatch ) {
 							session.getTransactionCoordinator()
 									.getJdbcCoordinator()

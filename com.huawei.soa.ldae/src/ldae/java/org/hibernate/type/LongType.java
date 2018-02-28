@@ -77,11 +77,11 @@ public class LongType
 
 	@Override
 	public Long next(Long current, SessionImplementor session) {
-		if(current == null)
-		{
-			throw new HibernateException("Optimistic-lock Version can not be null.");
-		}
-		return current + 1L;
+        if (current == null)
+        {
+            throw new HibernateException("Optimistic-lock Version can not be null.");
+        }
+        return current + 1L;
 	}
 
 	@Override

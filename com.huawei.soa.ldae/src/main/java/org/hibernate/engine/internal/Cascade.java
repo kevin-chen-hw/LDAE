@@ -29,6 +29,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Stack;
 
+import com.huawei.soa.ldae.partition.HintPartitionUtils;
 import org.hibernate.HibernateException;
 import org.hibernate.collection.spi.PersistentCollection;
 import org.hibernate.engine.spi.CascadeStyle;
@@ -345,6 +346,7 @@ public final class Cascade {
 		final String entityName = type.isEntityType()
 				? ( (EntityType) type ).getAssociatedEntityName()
 				: null;
+		HintPartitionUtils.convertHintToChild(parent, child, type);
 		if ( style.reallyDoCascade( action ) ) {
 			//not really necessary, but good for consistency...
 			eventSource.getPersistenceContext().addChildParent( child, parent );

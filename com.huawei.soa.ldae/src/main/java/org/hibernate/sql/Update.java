@@ -42,6 +42,7 @@ public class Update {
 	private String where;
 	private String assignments;
 	private String comment;
+	private String hint;
 
 	private Map primaryKeyColumns = new LinkedHashMap();
 	private Map columns = new LinkedHashMap();
@@ -64,6 +65,12 @@ public class Update {
 		else {
 			assignments += ", " + fragment;
 		}
+		return this;
+	}
+
+	public Update setHint(String hint)
+	{
+		this.hint = hint;
 		return this;
 	}
 
@@ -182,7 +189,12 @@ public class Update {
 		if ( comment!=null ) {
 			buf.append( "/* " ).append( comment ).append( " */ " );
 		}
-		buf.append( "update " ).append( tableName ).append( " set " );
+		buf.append("update ");
+		if(hint != null)
+		{
+			buf.append("/* ").append(hint).append(" */ ");
+		}
+		buf.append(tableName).append(" set ");
 		boolean assignmentsAppended = false;
 		Iterator iter = columns.entrySet().iterator();
 		while ( iter.hasNext() ) {

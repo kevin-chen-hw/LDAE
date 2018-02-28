@@ -1,8 +1,5 @@
 package com.huawei.soa.ldae.partition;
 
-/**
- * 
- */
 public class PartitionInfo
 {
     private final boolean partition;

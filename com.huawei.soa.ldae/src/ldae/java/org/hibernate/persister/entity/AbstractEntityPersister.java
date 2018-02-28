@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.huawei.soa.ldae.partition.HintPartitionUtils;
+import com.huawei.soa.ldae.partition.TransientEntityLocal;
 import org.hibernate.AssertionFailure;
 import org.hibernate.EntityMode;
 import org.hibernate.FetchMode;
@@ -71,7 +73,6 @@ import org.hibernate.engine.jdbc.batch.internal.BasicBatchKey;
 import org.hibernate.engine.spi.CachedNaturalIdValueSource;
 import org.hibernate.engine.spi.CascadeStyle;
 import org.hibernate.engine.spi.CascadeStyles;
-import org.hibernate.engine.spi.CascadingAction;
 import org.hibernate.engine.spi.CascadingActions;
 import org.hibernate.engine.spi.EntityEntry;
 import org.hibernate.engine.spi.EntityKey;
@@ -88,6 +89,7 @@ import org.hibernate.id.PostInsertIdentifierGenerator;
 import org.hibernate.id.PostInsertIdentityPersister;
 import org.hibernate.id.insert.Binder;
 import org.hibernate.id.insert.InsertGeneratedIdentifierDelegate;
+import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.FilterConfiguration;
 import org.hibernate.internal.FilterHelper;
@@ -158,10 +160,12 @@ public abstract class AbstractEntityPersister
 		implements OuterJoinLoadable, Queryable, ClassMetadata, UniqueKeyLoadable,
 		SQLLoadable, LazyPropertyInitializer, PostInsertIdentityPersister, Lockable {
 
+    private static final Logger log = CoreLogging.logger( AbstractEntityPersister.class );
 	private static final CoreMessageLogger LOG = Logger.getMessageLogger( CoreMessageLogger.class, AbstractEntityPersister.class.getName() );
 
 	public static final String ENTITY_CLASS = "class";
-	private final Object mutexCreateEntityLoaderLockForDebugMode = new Object();
+
+    private final Object mutexCreateEntityLoaderLockForDebugMode = new Object();
 
 	// moved up from AbstractEntityPersister ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	private final SessionFactoryImplementor factory;
@@ -206,6 +210,8 @@ public abstract class AbstractEntityPersister
 	private final boolean[] propertySelectable;
 	
 	private final List<Integer> lobProperties = new ArrayList<Integer>();
+
+	private final int hintPatitionProperty;
 
 	//information about lazy properties of this class
 	private final String[] lazyPropertyNames;
@@ -637,6 +643,7 @@ public abstract class AbstractEntityPersister
         iter = persistentClass.getPropertyClosureIterator();
         i = 0;
         boolean foundFormula = false;
+        int hintPropertyPos = -1;
         while (iter.hasNext())
         {
             Property prop = (Property) iter.next();
@@ -697,10 +704,16 @@ public abstract class AbstractEntityPersister
                 lobProperties.add(i);
             }
 
+            if(HintPartitionUtils.isHintColmun(propertyColumnNames[i]))
+            {
+                hintPropertyPos = i;
+            }
+
             i++;
 
         }
         hasFormulaProperties = foundFormula;
+        hintPatitionProperty = hintPropertyPos;
         lazyPropertyColumnAliases = ArrayHelper.to2DStringArray(lazyColAliases);
         lazyPropertyNames = ArrayHelper.toStringArray(lazyNames);
         lazyPropertyNumbers = ArrayHelper.toIntArray(lazyNumbers);
@@ -1001,6 +1014,7 @@ public abstract class AbstractEntityPersister
 
         i = 0;
         boolean foundFormula = false;
+        int hintPropertyPos = -1;
         for (AttributeBinding attributeBinding : entityBinding.getAttributeBindingClosure())
         {
             if (attributeBinding == entityBinding.getHierarchyDetails().getEntityIdentifier().getValueBinding())
@@ -1079,11 +1093,17 @@ public abstract class AbstractEntityPersister
 
             propertyUniqueness[i] = singularAttributeBinding.isAlternateUniqueKey();
 
+            if(HintPartitionUtils.isHintColmun(propertyColumnNames[i]))
+            {
+                hintPropertyPos = i;
+            }
+
             // TODO: Does this need AttributeBindings wired into lobProperties? Currently in Property only.
 
             i++;
 
         }
+        hintPatitionProperty = hintPropertyPos;
         hasFormulaProperties = foundFormula;
         lazyPropertyColumnAliases = ArrayHelper.to2DStringArray(lazyColAliases);
         lazyPropertyNames = ArrayHelper.toStringArray(lazyNames);
@@ -1595,7 +1615,8 @@ public abstract class AbstractEntityPersister
         for (int i = 0; i < getSubclassColumnClosure().length; i++)
         {
             boolean selectable = (allProperties || !subclassColumnLazyClosure[i])
-                    && !isSubclassTableSequentialSelect(columnTableNumbers[i]) && subclassColumnSelectableClosure[i];
+                    && !isSubclassTableSequentialSelect(columnTableNumbers[i]) && subclassColumnSelectableClosure[i] &&
+                    !HintPartitionUtils.isHintColmun(new String[]{subclassColumnClosure[i]});
             if (selectable)
             {
                 String subalias = generateTableAlias(tableAlias, columnTableNumbers[i]);
@@ -1641,50 +1662,63 @@ public abstract class AbstractEntityPersister
         try
         {
 			StringBuilder selectString = new StringBuilder(getSQLSnapshotSelectString());
-			
+
 			PartitionInfo partitionInfo = PartitionIntegrationFactory.getInstance().getPartitionInfo(getEntityName());
 			boolean needPartition = partitionInfo != null && partitionInfo.isPartition();
- 			Type[] partitionType = null;
-			Object[] partitionValue = null;
+            Type[] partitionType = null;
+            Object[] partitionValue = null;
 			if (needPartition)
 			{
 				partitionValue = PartitionIntegrationFactory.getInstance().getCurrentPartitionValue();
-				if (null == partitionValue)
+                if (null == partitionValue)
 				{
-					needPartition = false;
-				}
-				else
-				{
-					partitionType = new Type[partitionInfo.getFieldName().length];
-					for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-					{
-						partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
-					}
-					
-					for(String columnName : partitionInfo.getColumnName())
-					{
-						selectString.append(" and ").append(getRootAlias()).append('.').append(columnName).append("=?");
-					}
-				}
-				
+                    needPartition = false;
+                }
+                else
+                {
+                    partitionType = new Type[partitionInfo.getFieldName().length];
+                    for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+                    {
+                        partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
+                    }
+
+                    for (String columnName : partitionInfo.getColumnName())
+                    {
+                        selectString.append(" and ").append(getRootAlias()).append('.').append(columnName).append("=?");
+                    }
+                }
+
 			}
 
+			String sql = selectString.toString();
+			if (null != TransientEntityLocal.getCurrent())
+            {
+                Map<String, Object> hints = getRouterHints();
+                sql = HintPartitionUtils.getSelectClauseWithRouterHints(sql, hints);
+            }
+
             PreparedStatement ps = session.getTransactionCoordinator().getJdbcCoordinator().getStatementPreparer()
-					.prepareStatement(selectString.toString());
+					.prepareStatement(sql);
             try
             {
                 int offset = 1;
                 getIdentifierType().nullSafeSet(ps, id, offset, session);
                 offset += getIdentifierColumnSpan();
 
-				if (needPartition)
+                if (needPartition)
 				{
-					for(int i = 0; i < partitionValue.length; i++)
-					{
-						partitionType[i].nullSafeSet(ps, partitionValue[i], offset, session);
-						offset++;
-					}
+                    for (int i = 0; i < partitionValue.length; i++)
+                    {
+                        partitionType[i].nullSafeSet(ps, partitionValue[i], offset, session);
+                        offset++;
+                    }
 				}
+
+                if (null != TransientEntityLocal.getCurrent())
+                {
+                    Map<String, Object> hints = getRouterHints();
+                    offset = HintPartitionUtils.bindHintPartitionParam(ps, hints, offset, session);
+                }
 
                 // if ( isVersioned() ) getVersionType().nullSafeSet( ps, version, getIdentifierColumnSpan()+1, session
                 // );
@@ -1695,6 +1729,7 @@ public abstract class AbstractEntityPersister
                     // if there is no resulting row, return null
                     if (!rs.next())
                     {
+                        log.error("snapshot result" + sql);
                         return null;
                     }
                     // otherwise return the "hydrated" state (ie. associations are not resolved)
@@ -1728,6 +1763,19 @@ public abstract class AbstractEntityPersister
                     getSQLSnapshotSelectString());
         }
 
+    }
+
+    private Map<String, Object> getRouterHints()
+    {
+        Map entity = (Map)TransientEntityLocal.getCurrent();
+        Object routerValue = entity.get(HintPartitionUtils.HINT_COLUMN_NAME);
+        if (null != routerValue)
+        {
+            Map<String, Object> hints = (Map<String, Object>)routerValue;
+            return hints;
+        }
+
+        return new HashMap<String, Object>();
     }
 
     @Override
@@ -1931,7 +1979,7 @@ public abstract class AbstractEntityPersister
         SelectFragment frag = new SelectFragment();
         for (int i = 0; i < propertyCount; i++)
         {
-            if (inclusionChecker.includeProperty(i))
+            if (inclusionChecker.includeProperty(i) && hintPatitionProperty != i)
             {
                 frag.addColumnTemplates(generateTableAlias(alias, propertyTableNumbers[i]),
                         propertyColumnReaderTemplates[i], propertyColumnAliases[i]);
@@ -2797,13 +2845,13 @@ public abstract class AbstractEntityPersister
 
     protected String generateUpdateString(boolean[] includeProperty, int j, boolean useRowId)
     {
-        return generateUpdateString(includeProperty, j, null, useRowId);
+        return generateUpdateString(includeProperty, j, null, null, useRowId);
     }
 
     /**
      * Generate the SQL that updates a row by id (and version)
      */
-    protected String generateUpdateString(final boolean[] includeProperty, final int j, final Object[] oldFields,
+    protected String generateUpdateString(final boolean[] includeProperty, final int j, final Object[] fields, final Object[] oldFields,
             final boolean useRowId)
     {
 
@@ -2822,7 +2870,7 @@ public abstract class AbstractEntityPersister
         boolean hasColumns = false;
         for (int i = 0; i < entityMetamodel.getPropertySpan(); i++)
         {
-            if (includeProperty[i] && isPropertyOfTable(i, j) && !lobProperties.contains(i))
+            if (includeProperty[i] && isPropertyOfTable(i, j) && !lobProperties.contains(i) && hintPatitionProperty != i)
             {
                 // this is a property of the table, which we are updating
                 update.addColumns(getPropertyColumnNames(i), propertyColumnUpdateable[i], propertyColumnWriters[i]);
@@ -2841,6 +2889,11 @@ public abstract class AbstractEntityPersister
                 update.addColumns(getPropertyColumnNames(i), propertyColumnUpdateable[i], propertyColumnWriters[i]);
                 hasColumns = true;
             }
+        }
+
+        if(HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+        {
+            update.setHint(HintPartitionUtils.getHintSql(fields[hintPatitionProperty]));
         }
 
         if (j == 0 && isVersioned() && entityMetamodel.getOptimisticLockStyle() == OptimisticLockStyle.VERSION)
@@ -2901,25 +2954,30 @@ public abstract class AbstractEntityPersister
         return hasColumns ? update.toStatementString() : null;
     }
 
+    public int getHintPartitionProperty()
+    {
+        return hintPatitionProperty;
+    }
+
     private boolean checkVersion(final boolean[] includeProperty)
     {
         return includeProperty[getVersionProperty()] || entityMetamodel.isVersionGenerated();
     }
 
-    protected String generateInsertString(boolean[] includeProperty, int j)
+    protected String generateInsertString(boolean[] includeProperty, int j, Object[] fields)
     {
-        return generateInsertString(false, includeProperty, j);
+        return generateInsertString(false, includeProperty, j, fields);
     }
 
-    protected String generateInsertString(boolean identityInsert, boolean[] includeProperty)
+    protected String generateInsertString(boolean identityInsert, boolean[] includeProperty, Object[] fields)
     {
-        return generateInsertString(identityInsert, includeProperty, 0);
+        return generateInsertString(identityInsert, includeProperty, 0, fields);
     }
 
     /**
      * Generate the SQL that inserts a row
      */
-    protected String generateInsertString(boolean identityInsert, boolean[] includeProperty, int j)
+    protected String generateInsertString(boolean identityInsert, boolean[] includeProperty, int j, Object[] fields)
     {
 
         // todo : remove the identityInsert param and variations;
@@ -2935,7 +2993,7 @@ public abstract class AbstractEntityPersister
             // values
             if (isPropertyOfTable(i, j))
             {
-                if (!lobProperties.contains(i))
+                if (!lobProperties.contains(i) && hintPatitionProperty != i)
                 {
                     final InDatabaseValueGenerationStrategy generationStrategy = entityMetamodel
                             .getInDatabaseValueGenerationStrategies()[i];
@@ -3007,6 +3065,11 @@ public abstract class AbstractEntityPersister
                 // this property belongs on the table and is to be inserted
                 insert.addColumns(getPropertyColumnNames(i), propertyColumnInsertable[i], propertyColumnWriters[i]);
             }
+        }
+
+        if(HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+        {
+            insert.setHit(HintPartitionUtils.getHintSql(fields[hintPatitionProperty]));
         }
 
         String result = insert.toStatementString();
@@ -3106,7 +3169,7 @@ public abstract class AbstractEntityPersister
 
         for (int i = 0; i < entityMetamodel.getPropertySpan(); i++)
         {
-            if (includeProperty[i] && isPropertyOfTable(i, j) && !lobProperties.contains(i))
+            if (includeProperty[i] && isPropertyOfTable(i, j) && !lobProperties.contains(i) && hintPatitionProperty != i)
             {
                 getPropertyTypes()[i].nullSafeSet(ps, fields[i], index, includeColumns[i], session);
                 index += ArrayHelper.countTrue(includeColumns[i]); // TODO: this is kinda slow...
@@ -3134,6 +3197,11 @@ public abstract class AbstractEntityPersister
         {
             index += dehydrateId(id, rowId, ps, session, index);
         }
+
+//        if (HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+//        {
+//            index = HintPartitionUtils.bindHintPartitionParam(ps, fields[hintPatitionProperty], index, session);
+//        }
 
         return index;
 
@@ -3396,7 +3464,12 @@ public abstract class AbstractEntityPersister
                 // Write the values of fields onto the prepared statement - we MUST use the state at the time the
                 // insert was issued (cos of foreign key constraints). Not necessarily the object's current state
 
-                dehydrate(id, fields, null, notNull, propertyColumnInsertable, j, insert, session, index, false);
+                index = dehydrate(id, fields, null, notNull, propertyColumnInsertable, j, insert, session, index, false);
+
+                if (HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+                {
+                    index = HintPartitionUtils.bindHintPartitionParam(insert, fields[hintPatitionProperty], index, session);
+                }
 
                 if (useBatch)
                 {
@@ -3454,7 +3527,13 @@ public abstract class AbstractEntityPersister
             {
                 // if all fields are null, we might need to delete existing row
                 isRowToUpdate = true;
-                delete(id, oldVersion, j, object, getSQLDeleteStrings()[j], session, null);
+                String deleteSql = getSQLDeleteStrings()[j];
+                if(HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+                {
+                    deleteSql = HintPartitionUtils.getHintSql(deleteSql, object);
+                }
+
+                delete(id, oldVersion, j, object, deleteSql, session, null);
             }
             else
             {
@@ -3469,7 +3548,12 @@ public abstract class AbstractEntityPersister
                 // assume that the row was not there since it previously had only null
                 // values, so do an INSERT instead
                 // TODO: does not respect dynamic-insert
-                insert(id, fields, getPropertyInsertability(), j, getSQLInsertStrings()[j], object, session);
+                String insertSql = getSQLInsertStrings()[j];
+                if(HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+                {
+                    insertSql = HintPartitionUtils.getHintSql(insertSql, object);
+                }
+                insert(id, fields, getPropertyInsertability(), j, insertSql, object, session);
             }
 
         }
@@ -3500,19 +3584,19 @@ public abstract class AbstractEntityPersister
         Object[] partitionValue = null;
         if (needPartition)
         {
-        	for(String columnName : partitionInfo.getColumnName())
-        	{
-        		sqlToExecute += new StringBuilder(" and ").append(columnName).append(" = ?")
-        				.toString();
-        	}
-        	
-        	partitionType = new Type[partitionInfo.getFieldName().length];
-        	partitionValue = new Object[partitionInfo.getFieldName().length];
-        	for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-        	{
-        		partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
-        		partitionValue[i] = fields[getPropertyIndex(partitionInfo.getFieldName()[i])];
-        	}
+            for (String columnName : partitionInfo.getColumnName())
+            {
+                sqlToExecute += new StringBuilder(" and ").append(columnName).append(" = ?")
+                        .toString();
+            }
+
+            partitionType = new Type[partitionInfo.getFieldName().length];
+            partitionValue = new Object[partitionInfo.getFieldName().length];
+            for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+            {
+                partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
+                partitionValue[i] = fields[getPropertyIndex(partitionInfo.getFieldName()[i])];
+            }
         }
 
         if (LOG.isTraceEnabled())
@@ -3577,11 +3661,16 @@ public abstract class AbstractEntityPersister
 
                 if (needPartition)
                 {
-                    for(int i = 0; i < partitionValue.length; i++)
+                    for (int i = 0; i < partitionValue.length; i++)
                     {
-                    	partitionType[i].nullSafeSet(update, partitionValue[i], index, session);
-                    	index++;
+                        partitionType[i].nullSafeSet(update, partitionValue[i], index, session);
+                        index++;
                     }
+                }
+
+                if (HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+                {
+                    index = HintPartitionUtils.bindHintPartitionParam(update, fields[hintPatitionProperty], index, session);
                 }
 
                 if (useBatch)
@@ -3633,7 +3722,6 @@ public abstract class AbstractEntityPersister
         {
             return;
         }
-
         final boolean useVersion = j == 0 && isVersioned();
         final boolean callable = isDeleteCallable(j);
         final Expectation expectation = Expectations.appropriateExpectation(deleteResultCheckStyles[j]);
@@ -3667,19 +3755,24 @@ public abstract class AbstractEntityPersister
         Object[] partitionValue = null;
         if (needPartition)
         {
-        	for(String columnName : partitionInfo.getColumnName())
-        	{
-        		sqlToExecute += new StringBuilder(" and ").append(columnName).append(" = ?")
-        				.toString();
-        	}
-        	
-        	partitionType = new Type[partitionInfo.getFieldName().length];
-        	partitionValue = new Object[partitionInfo.getFieldName().length];
-        	for(int i = 0; i < partitionInfo.getFieldName().length; i++)
-        	{
-        		partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
-        		partitionValue[i] = ((Map) object).get(partitionInfo.getFieldName()[i]);
-        	}
+            for (String columnName : partitionInfo.getColumnName())
+            {
+                sqlToExecute += new StringBuilder(" and ").append(columnName).append(" = ?")
+                        .toString();
+            }
+
+            partitionType = new Type[partitionInfo.getFieldName().length];
+            partitionValue = new Object[partitionInfo.getFieldName().length];
+            for (int i = 0; i < partitionInfo.getFieldName().length; i++)
+            {
+                partitionType[i] = getPropertyType(partitionInfo.getFieldName()[i]);
+                partitionValue[i] = ((Map) object).get(partitionInfo.getFieldName()[i]);
+            }
+        }
+
+        if(HintPartitionUtils.isHintPartition(this, object))
+        {
+            sqlToExecute = HintPartitionUtils.getHintSql(sqlToExecute, object);
         }
 
         try
@@ -3734,11 +3827,17 @@ public abstract class AbstractEntityPersister
 
                 if (needPartition)
                 {
-                	for(int i = 0; i < partitionValue.length; i++)
+                    for (int i = 0; i < partitionValue.length; i++)
                     {
-                    	partitionType[i].nullSafeSet(delete, partitionValue[i], index, session);
-                    	index++;
+                        partitionType[i].nullSafeSet(delete, partitionValue[i], index, session);
+                        index++;
                     }
+                }
+
+                if(HintPartitionUtils.isHintPartition(this, object))
+                {
+                    index = HintPartitionUtils.bindHintPartitionParam(delete,
+                            ((Map)object).get(HintPartitionUtils.HINT_COLUMN_NAME) , index, session);
                 }
 
                 if (useBatch)
@@ -3778,16 +3877,28 @@ public abstract class AbstractEntityPersister
 
     }
 
-    private String[] getUpdateStrings(boolean byRowId, boolean lazy)
+    private String[] getUpdateStrings(boolean byRowId, boolean lazy, Object[] fields, Object object)
     {
+        String[] sqls;
         if (byRowId)
         {
-            return lazy ? getSQLLazyUpdateByRowIdStrings() : getSQLUpdateByRowIdStrings();
+            sqls = lazy ? getSQLLazyUpdateByRowIdStrings() : getSQLUpdateByRowIdStrings();
         }
         else
         {
-            return lazy ? getSQLLazyUpdateStrings() : getSQLUpdateStrings();
+            sqls = lazy ? getSQLLazyUpdateStrings() : getSQLUpdateStrings();
         }
+        if(sqls != null)
+        {
+            for(int i=0; i<sqls.length; i++)
+            {
+                if(HintPartitionUtils.isHintPartition(this, fields, hintPatitionProperty))
+                {
+                    sqls[i] = HintPartitionUtils.getHintSql(sqls[i], object);
+                }
+            }
+        }
+        return sqls;
     }
 
     /**
@@ -3839,7 +3950,7 @@ public abstract class AbstractEntityPersister
             updateStrings = new String[span];
             for (int j = 0; j < span; j++)
             {
-                updateStrings[j] = tableUpdateNeeded[j] ? generateUpdateString(propsToUpdate, j, oldFields, j == 0
+                updateStrings[j] = tableUpdateNeeded[j] ? generateUpdateString(propsToUpdate, j, fields, oldFields, j == 0
                         && rowId != null) : null;
             }
         }
@@ -3858,14 +3969,14 @@ public abstract class AbstractEntityPersister
             updateStrings = new String[span];
             for (int j = 0; j < span; j++)
             {
-                updateStrings[j] = tableUpdateNeeded[j] ? generateUpdateString(propsToUpdate, j, oldFields, j == 0
+                updateStrings[j] = tableUpdateNeeded[j] ? generateUpdateString(propsToUpdate, j, fields, oldFields, j == 0
                         && rowId != null) : null;
             }
         }
         else
         {
             // For the case of dynamic-update="false", or no snapshot, we use the static SQL
-            updateStrings = getUpdateStrings(rowId != null, hasUninitializedLazyProperties(object));
+            updateStrings = getUpdateStrings(rowId != null, hasUninitializedLazyProperties(object), fields, object);
             propsToUpdate = getPropertyUpdateability(object);
         }
 
@@ -3889,14 +4000,15 @@ public abstract class AbstractEntityPersister
         {
             // For the case of dynamic-insert="true", we need to generate the INSERT SQL
             boolean[] notNull = getPropertiesToInsert(fields);
-            id = insert(fields, notNull, generateInsertString(true, notNull), object, session);
+            id = insert(fields, notNull, generateInsertString(true, notNull, fields), object, session);
             for (int j = 1; j < span; j++)
             {
-                insert(id, fields, notNull, j, generateInsertString(notNull, j), object, session);
+                insert(id, fields, notNull, j, generateInsertString(notNull, j, fields), object, session);
             }
         }
         else
         {
+
             // For the case of dynamic-insert="false", use the static SQL
             id = insert(fields, getPropertyInsertability(), getSQLIdentityInsertString(), object, session);
             for (int j = 1; j < span; j++)
@@ -3931,7 +4043,7 @@ public abstract class AbstractEntityPersister
             boolean[] notNull = getPropertiesToInsert(fields);
             for (int j = 0; j < span; j++)
             {
-                insert(id, fields, notNull, j, generateInsertString(notNull, j), object, session);
+                insert(id, fields, notNull, j, generateInsertString(notNull, j, fields), object, session);
             }
         }
         else
@@ -4341,7 +4453,7 @@ public abstract class AbstractEntityPersister
 
         for (int j = 0; j < joinSpan; j++)
         {
-            sqlInsertStrings[j] = customSQLInsert[j] == null ? generateInsertString(getPropertyInsertability(), j)
+            sqlInsertStrings[j] = customSQLInsert[j] == null ? generateInsertString(getPropertyInsertability(), j, null)
                     : customSQLInsert[j];
             sqlUpdateStrings[j] = customSQLUpdate[j] == null ? generateUpdateString(getPropertyUpdateability(), j,
                     false) : customSQLUpdate[j];
@@ -4387,7 +4499,7 @@ public abstract class AbstractEntityPersister
     {
         doLateInit();
 
-        if(!DebugUtils.isDebug())
+        if (!DebugUtils.isDebug())
         {
             createLoaders();
         }
@@ -4522,28 +4634,28 @@ public abstract class AbstractEntityPersister
             // Next, we consider whether an 'internal' fetch profile has been set.
             // This indicates a special fetch profile Hibernate needs applied
             // (for its merge loading process e.g.).
-            if(DebugUtils.isDebug())
+            if (DebugUtils.isDebug())
             {
                 String internalFetchProfile = session.getLoadQueryInfluencers().getInternalFetchProfile();
                 Object o = loaders.get(internalFetchProfile);
-                
-                if(o == null)
+
+                if (o == null)
                 {
                     synchronized (mutexCreateEntityLoaderLockForDebugMode)
                     {
-                        if(o == null)
+                        if (o == null)
                         {
                             o = createLazyLoader(internalFetchProfile);
                             loaders.put(internalFetchProfile, o);
                         }
                     }
                 }
-            
-                return (UniqueEntityLoader)o;
+
+                return (UniqueEntityLoader) o;
             }
             else
             {
-                return (UniqueEntityLoader) getLoaders().get(session.getLoadQueryInfluencers().getInternalFetchProfile());  
+            return (UniqueEntityLoader) getLoaders().get(session.getLoadQueryInfluencers().getInternalFetchProfile());
             }
         }
         else if (isAffectedByEnabledFetchProfiles(session))
@@ -4562,12 +4674,12 @@ public abstract class AbstractEntityPersister
         }
         else
         {
-            if(DebugUtils.isDebug())
+            if (DebugUtils.isDebug())
             {
                 LockMode lockMode = lockOptions.getLockMode();
                 Object o = loaders.get(lockMode);
-                
-                if(o == null)
+
+                if (o == null)
                 {
                     synchronized (mutexCreateEntityLoaderLockForDebugMode)
                     {
@@ -4578,7 +4690,7 @@ public abstract class AbstractEntityPersister
                         }
                     }
                 }
-                
+
                 return (UniqueEntityLoader) o;
             }
             else
@@ -4587,87 +4699,87 @@ public abstract class AbstractEntityPersister
             }
         }
     }
-    
+
     protected UniqueEntityLoader createLazyLoader(Object key)
     {
-        if(null == key)
+        if (null == key)
         {
             return null;
         }
-        
-        if(loaders.containsKey(key))
+
+        if (loaders.containsKey(key))
         {
             return (UniqueEntityLoader) loaders.get(key);
         }
-        
-        if(key instanceof LockMode)
+
+        if (key instanceof LockMode)
         {
             LockMode mode = (LockMode) key;
-            
+
             switch (mode)
             {
                 case NONE:
                     return this.createEntityLoader(LockMode.NONE);
-                    
+
                 case READ:
                     return this.createEntityLoader(LockMode.READ);
-                    
+
                 case OPTIMISTIC:
                     return this.createEntityLoader(LockMode.OPTIMISTIC);
-                    
+
                 case OPTIMISTIC_FORCE_INCREMENT:
                     return this.createEntityLoader(LockMode.OPTIMISTIC_FORCE_INCREMENT);
             }
-            
+
             boolean disableForUpdate = (this.getSubclassTableSpan() > 1) && this.hasSubclasses()
                     && !this.getFactory().getDialect().supportsOuterJoinForUpdate();
-            
-            if(disableForUpdate)
+
+            if (disableForUpdate)
             {
                 return this.createEntityLoader(LockMode.READ);
             }
-            
-            switch(mode)
+
+            switch (mode)
             {
                 case UPGRADE:
                     return this.createEntityLoader(LockMode.UPGRADE);
 
                 case UPGRADE_NOWAIT:
                     return this.createEntityLoader(LockMode.UPGRADE_NOWAIT);
-                    
+
                 case UPGRADE_SKIPLOCKED:
                     return this.createEntityLoader(LockMode.UPGRADE_SKIPLOCKED);
-                    
+
                 case FORCE:
                     return this.createEntityLoader(LockMode.FORCE);
-                    
+
                 case PESSIMISTIC_READ:
                     return this.createEntityLoader(LockMode.PESSIMISTIC_READ);
-                    
+
                 case PESSIMISTIC_WRITE:
                     return this.createEntityLoader(LockMode.PESSIMISTIC_WRITE);
-                    
+
                 case PESSIMISTIC_FORCE_INCREMENT:
                     return this.createEntityLoader(LockMode.PESSIMISTIC_FORCE_INCREMENT);
-                    
+
                 default:
                     return null;
             }
         }
-        
-        if(key instanceof String)
+
+        if (key instanceof String)
         {
-            if("merge".equals(key))
+            if ("merge".equals(key))
             {
                 return new CascadeEntityLoader(this, CascadingActions.MERGE, this.getFactory());
             }
-            
-            if("refresh".equals(key))
+
+            if ("refresh".equals(key))
             {
                 return new CascadeEntityLoader(this, CascadingActions.REFRESH, this.getFactory());
             }
         }
-        
+
         return null;
     }
 

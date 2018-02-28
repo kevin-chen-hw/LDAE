@@ -78,11 +78,11 @@ public class IntegerType extends AbstractSingleColumnStandardBasicType<Integer>
 	}
 	@Override
 	public Integer next(Integer current, SessionImplementor session) {
-		if(current == null)
-		{
-			throw new HibernateException("Optimistic-lock Version can not be null.");
-		}
-		return current+1;
+        if (current == null)
+        {
+            throw new HibernateException("Optimistic-lock Version can not be null.");
+        }
+        return current + 1;
 	}
 	@Override
 	public Comparator<Integer> getComparator() {

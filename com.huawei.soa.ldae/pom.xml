@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>com.huawei.soa</groupId>
 	<artifactId>com.huawei.soa.ldae</artifactId>
-	<version>1.1.4</version>
+	<version>1.1.5</version>
 	<description>Light Data Access Engine : Base on Hibernate 4.3.1.Final</description>
 	<properties>
 		<soa.maven.url>10.136.93.18:8080</soa.maven.url>
@@ -43,10 +43,9 @@
 			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>org.javassist</groupId>
+			<groupId>javassist</groupId>
 			<artifactId>javassist</artifactId>
-			<version>3.18.1-GA</version>
-		  <scope>compile</scope>
+			<version>3.18.1.GA</version>
 		</dependency>
 		<dependency>
 			<groupId>org.antlr</groupId>

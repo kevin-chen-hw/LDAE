@@ -37,12 +37,19 @@ public class Delete {
 	private String tableName;
 	private String versionColumnName;
 	private String where;
+	private String hint;
 
 	private Map primaryKeyColumns = new LinkedHashMap();	
 	
 	private String comment;
 	public Delete setComment(String comment) {
 		this.comment = comment;
+		return this;
+	}
+
+	public Delete setHint(String hint)
+	{
+		this.hint = hint;
 		return this;
 	}
 
@@ -56,7 +63,12 @@ public class Delete {
 		if ( comment!=null ) {
 			buf.append( "/* " ).append(comment).append( " */ " );
 		}
-		buf.append( "delete from " ).append(tableName);
+		buf.append( "delete");
+		if(hint!=null)
+		{
+			buf.append(" /* ").append(hint).append(" */ ");
+		}
+		buf.append(" from " ).append(tableName);
 		if ( where != null || !primaryKeyColumns.isEmpty() || versionColumnName != null ) {
 			buf.append( " where " );
 		}

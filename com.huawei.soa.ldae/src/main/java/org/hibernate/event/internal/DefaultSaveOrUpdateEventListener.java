@@ -48,6 +48,7 @@ import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.persister.entity.EntityPersister;
 import org.hibernate.pretty.MessageHelper;
 import org.hibernate.proxy.HibernateProxy;
+import org.jboss.logging.Logger;
 
 /**
  * Defines the default listener used by Hibernate for handling save-update
@@ -58,7 +59,7 @@ import org.hibernate.proxy.HibernateProxy;
  */
 public class DefaultSaveOrUpdateEventListener extends AbstractSaveEventListener implements SaveOrUpdateEventListener {
 	private static final CoreMessageLogger LOG = CoreLogging.messageLogger( DefaultSaveOrUpdateEventListener.class );
-
+	private static final Logger log = CoreLogging.logger(DefaultSaveOrUpdateEventListener.class);
 	/**
 	 * Handle the given update event.
 	 *
@@ -106,11 +107,23 @@ public class DefaultSaveOrUpdateEventListener extends AbstractSaveEventListener 
 
 		switch ( entityState ) {
 			case DETACHED:
+				if(log.isDebugEnabled())
+				{
+					log.debug("current state:detached");
+				}
 				entityIsDetached( event );
 				return null;
 			case PERSISTENT:
+				if(log.isDebugEnabled())
+				{
+					log.debug("current state:persistent");
+				}
 				return entityIsPersistent( event );
 			default: //TRANSIENT or DELETED
+				if(log.isDebugEnabled())
+				{
+					log.debug("current state:other");
+				}
 				return entityIsTransient( event );
 		}
 	}
