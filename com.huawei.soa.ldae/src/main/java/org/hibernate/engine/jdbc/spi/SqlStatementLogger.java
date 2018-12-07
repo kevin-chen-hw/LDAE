@@ -94,6 +94,10 @@ public class SqlStatementLogger {
 		logStatement( statement, FormatStyle.BASIC.getFormatter() );
 	}
 
+	public void logBindParam(int index, Object value, String entityName, String fieldName)
+	{
+	}
+
 	/**
 	 * Log a SQL statement string using the specified formatter
 	 *

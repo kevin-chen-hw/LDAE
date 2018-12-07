@@ -35,6 +35,8 @@ import org.hibernate.HibernateException;
 import org.hibernate.MappingException;
 import org.hibernate.cfg.Environment;
 import org.hibernate.engine.jdbc.LobCreator;
+import org.hibernate.engine.jdbc.spi.JdbcServices;
+import org.hibernate.engine.jdbc.spi.SqlStatementLogger;
 import org.hibernate.engine.spi.Mapping;
 import org.hibernate.engine.spi.SessionFactoryImplementor;
 import org.hibernate.engine.spi.SessionImplementor;
@@ -402,6 +404,13 @@ public abstract class AbstractStandardBasicType<T>
 						? session.getFactory().getDialect().remapSqlTypeDescriptor( sqlTypeDescriptor )
 						: sqlTypeDescriptor;
 				return remapped == null ? sqlTypeDescriptor : remapped;
+			}
+
+			public SqlStatementLogger getSqlStatementLogger()
+			{
+				return session.getFactory().getServiceRegistry()
+						.getService( JdbcServices.class )
+						.getSqlStatementLogger();
 			}
 		};
 	}

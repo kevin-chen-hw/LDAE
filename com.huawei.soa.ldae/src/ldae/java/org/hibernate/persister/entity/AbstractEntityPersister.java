@@ -70,6 +70,8 @@ import org.hibernate.engine.internal.CacheHelper;
 import org.hibernate.engine.internal.StatefulPersistenceContext;
 import org.hibernate.engine.internal.Versioning;
 import org.hibernate.engine.jdbc.batch.internal.BasicBatchKey;
+import org.hibernate.engine.jdbc.spi.JdbcServices;
+import org.hibernate.engine.jdbc.spi.SqlStatementLogger;
 import org.hibernate.engine.spi.CachedNaturalIdValueSource;
 import org.hibernate.engine.spi.CascadeStyle;
 import org.hibernate.engine.spi.CascadeStyles;
@@ -169,6 +171,7 @@ public abstract class AbstractEntityPersister
 
 	// moved up from AbstractEntityPersister ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	private final SessionFactoryImplementor factory;
+    private final SqlStatementLogger logger;
 	private final EntityRegionAccessStrategy cacheAccessStrategy;
 	private final NaturalIdRegionAccessStrategy naturalIdRegionAccessStrategy;
 	private final boolean isLazyPropertiesCacheable;
@@ -554,6 +557,9 @@ public abstract class AbstractEntityPersister
 
         // moved up from AbstractEntityPersister ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
         this.factory = factory;
+        this.logger = this.factory.getServiceRegistry()
+                .getService( JdbcServices.class )
+                .getSqlStatementLogger();
         this.cacheAccessStrategy = cacheAccessStrategy;
         this.naturalIdRegionAccessStrategy = naturalIdRegionAccessStrategy;
         isLazyPropertiesCacheable = persistentClass.isLazyPropertiesCacheable();
@@ -915,6 +921,9 @@ public abstract class AbstractEntityPersister
             throws HibernateException
     {
         this.factory = factory;
+        this.logger = this.factory.getServiceRegistry()
+                .getService( JdbcServices.class )
+                .getSqlStatementLogger();
         this.cacheAccessStrategy = cacheAccessStrategy;
         this.naturalIdRegionAccessStrategy = naturalIdRegionAccessStrategy;
         this.isLazyPropertiesCacheable = entityBinding.getHierarchyDetails().getCaching() == null ? false
@@ -1729,7 +1738,7 @@ public abstract class AbstractEntityPersister
                     // if there is no resulting row, return null
                     if (!rs.next())
                     {
-                        log.error("snapshot result" + sql);
+                        log.debug("snapshot result" + sql);
                         return null;
                     }
                     // otherwise return the "hydrated" state (ie. associations are not resolved)
@@ -3172,6 +3181,7 @@ public abstract class AbstractEntityPersister
             if (includeProperty[i] && isPropertyOfTable(i, j) && !lobProperties.contains(i) && hintPatitionProperty != i)
             {
                 getPropertyTypes()[i].nullSafeSet(ps, fields[i], index, includeColumns[i], session);
+                this.logger.logBindParam(index, fields[i], getEntityName(), getPropertyNames()[i]);
                 index += ArrayHelper.countTrue(includeColumns[i]); // TODO: this is kinda slow...
             }
         }
@@ -3218,6 +3228,7 @@ public abstract class AbstractEntityPersister
         else if (id != null)
         {
             getIdentifierType().nullSafeSet(ps, id, index, session);
+            this.logger.logBindParam(index, id, getEntityName(), getIdentifierPropertyName());
             return getIdentifierColumnSpan();
         }
         return 0;
@@ -3664,6 +3675,7 @@ public abstract class AbstractEntityPersister
                     for (int i = 0; i < partitionValue.length; i++)
                     {
                         partitionType[i].nullSafeSet(update, partitionValue[i], index, session);
+                        this.logger.logBindParam(index, partitionValue[i], getEntityName(), partitionInfo.getFieldName()[i]);
                         index++;
                     }
                 }
@@ -3799,6 +3811,7 @@ public abstract class AbstractEntityPersister
                 // Do the key. The key is immutable so we can use the _current_ object state - not necessarily
                 // the state at the time the delete was issued
                 getIdentifierType().nullSafeSet(delete, id, index, session);
+                this.logger.logBindParam(index, id, getEntityName(), getIdentifierPropertyName());
                 index += getIdentifierColumnSpan();
 
                 // We should use the _current_ object state (ie. after any updates that occurred during flush)
@@ -3830,6 +3843,7 @@ public abstract class AbstractEntityPersister
                     for (int i = 0; i < partitionValue.length; i++)
                     {
                         partitionType[i].nullSafeSet(delete, partitionValue[i], index, session);
+                        this.logger.logBindParam(index, partitionValue[i], getEntityName(), partitionInfo.getFieldName()[i]);
                         index++;
                     }
                 }

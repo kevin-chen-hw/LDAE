@@ -24,6 +24,7 @@
 package org.hibernate.type.descriptor;
 
 import org.hibernate.engine.jdbc.LobCreator;
+import org.hibernate.engine.jdbc.spi.SqlStatementLogger;
 import org.hibernate.type.descriptor.sql.SqlTypeDescriptor;
 
 /**
@@ -56,4 +57,6 @@ public interface WrapperOptions {
 	 * @return The remapped descriptor.  May be the same as the known descriptor indicating no remapping.
 	 */
 	public SqlTypeDescriptor remapSqlTypeDescriptor(SqlTypeDescriptor sqlTypeDescriptor);
+
+	public SqlStatementLogger getSqlStatementLogger();
 }
