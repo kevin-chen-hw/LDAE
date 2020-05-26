@@ -89,6 +89,8 @@ public abstract class BasicBinder<J> implements ValueBinder<J> {
             }
             doBind( st, value, index, options );
         }
+		
+		options.getSqlStatementLogger().logBindParam(index, value, null, null);
 	}
 
 	/**
