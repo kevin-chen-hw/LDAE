@@ -167,7 +167,7 @@ public interface Session extends SharedSessionContract {
 	 * @return the connection provided by the application or null.
 	 * @throws HibernateException Indicates problems cleaning up.
 	 */
-	public Connection close() throws HibernateException;
+	public void close() throws HibernateException;
 
 	/**
 	 * Cancel the execution of the current query.
